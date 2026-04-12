@@ -80,6 +80,18 @@ const contentSchema = new mongoose.Schema({
         enum: ['standard', 'interactive_article'],
         default: 'standard'
     },
+    introduction: {
+        type: String,
+        default: ''
+    },
+    detailedExplanation: {
+        type: String,
+        default: ''
+    },
+    additionalResources: {
+        type: String,
+        default: ''
+    },
     elements: [elementSchema],
     createdAt: {
         type: Date,

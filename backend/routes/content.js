@@ -11,7 +11,7 @@ router.post('/upload', authMiddleware, upload.array('media', 20), async (req, re
             return res.status(403).json({ error: 'Only teachers can upload content' });
         }
         
-        const { subject, title, description, elements, contentType } = JSON.parse(req.body.data);
+        const { subject, title, description, introduction, detailedExplanation, additionalResources, elements, contentType } = JSON.parse(req.body.data);
         
         const uploadedElements = JSON.parse(JSON.stringify(elements));
         let fileIndex = 0;
@@ -50,6 +50,9 @@ router.post('/upload', authMiddleware, upload.array('media', 20), async (req, re
             subject,
             title,
             description,
+            introduction: introduction || '',
+            detailedExplanation: detailedExplanation || '',
+            additionalResources: additionalResources || '',
             teacherId: req.userId,
             elements: uploadedElements,
             contentType: contentType || 'standard'
@@ -107,7 +110,7 @@ router.put('/update/:id', authMiddleware, upload.array('media', 20), async (req,
             return res.status(400).json({ error: 'Invalid content ID format' });
         }
         
-        const { subject, title, description, elements, contentType } = JSON.parse(req.body.data);
+        const { subject, title, description, introduction, detailedExplanation, additionalResources, elements, contentType } = JSON.parse(req.body.data);
         const uploadedElements = JSON.parse(JSON.stringify(elements));
         let fileIndex = 0;
         
@@ -142,6 +145,9 @@ router.put('/update/:id', authMiddleware, upload.array('media', 20), async (req,
                 subject,
                 title,
                 description,
+                introduction: introduction || '',
+                detailedExplanation: detailedExplanation || '',
+                additionalResources: additionalResources || '',
                 elements: uploadedElements,
                 contentType: contentType || 'standard'
             },

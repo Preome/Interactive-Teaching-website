@@ -440,8 +440,36 @@ const ContentViewPage = ({ token, user }) => {
                     </div>
                     
                     {content.description && (
-                        <div className="p-5 bg-gray-50 border-b">
-                            <p className="text-gray-700">{content.description}</p>
+                        <div className="p-5 bg-gray-50">
+                            <h3 className="font-bold mb-2 text-gray-800">📝 Description</h3>
+                            <p className="text-gray-700 whitespace-pre-wrap">{content.description}</p>
+                        </div>
+                    )}
+                    
+                    {content.introduction && (
+                        <div className="p-5 bg-green-50 border-t">
+                            <h3 className="font-bold mb-2 text-gray-800 flex items-center gap-2">
+                                <span className="text-xl">📖</span> Introduction
+                            </h3>
+                            <div className="text-gray-700 whitespace-pre-wrap prose max-w-none">{content.introduction}</div>
+                        </div>
+                    )}
+                    
+                    {content.detailedExplanation && (
+                        <div className="p-5 bg-blue-50 border-t">
+                            <h3 className="font-bold mb-2 text-gray-800 flex items-center gap-2">
+                                <span className="text-xl">📚</span> Detailed Explanation
+                            </h3>
+                            <div className="text-gray-700 whitespace-pre-wrap prose max-w-none">{content.detailedExplanation}</div>
+                        </div>
+                    )}
+                    
+                    {content.additionalResources && (
+                        <div className="p-5 bg-purple-50 border-t">
+                            <h3 className="font-bold mb-2 text-gray-800 flex items-center gap-2">
+                                <span className="text-xl">🔗</span> Additional Resources
+                            </h3>
+                            <div className="text-gray-700 whitespace-pre-wrap prose max-w-none">{content.additionalResources}</div>
                         </div>
                     )}
                 </div>

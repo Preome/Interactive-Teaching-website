@@ -6,6 +6,9 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
     const [subject, setSubject] = useState(editingContent?.subject || 'microsoft_word');
     const [title, setTitle] = useState(editingContent?.title || '');
     const [description, setDescription] = useState(editingContent?.description || '');
+    const [introduction, setIntroduction] = useState(editingContent?.introduction || '');
+    const [detailedExplanation, setDetailedExplanation] = useState(editingContent?.detailedExplanation || '');
+    const [additionalResources, setAdditionalResources] = useState(editingContent?.additionalResources || '');
     const [elements, setElements] = useState(editingContent?.elements || []);
     const [currentText, setCurrentText] = useState('');
     const [currentYoutubeUrl, setCurrentYoutubeUrl] = useState('');
@@ -159,6 +162,9 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
             subject, 
             title, 
             description, 
+            introduction,
+            detailedExplanation,
+            additionalResources,
             elements: cleanElementsData,
             contentType: contentType
         }));
@@ -199,6 +205,9 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
             // Reset form
             setTitle('');
             setDescription('');
+            setIntroduction('');
+            setDetailedExplanation('');
+            setAdditionalResources('');
             setElements([]);
             setSelectedImages([]);
             setSelectedVideos([]);
@@ -335,6 +344,39 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
                         className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         rows="3"
                         placeholder="Enter a brief description..."
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">📖 Introduction</label>
+                    <textarea
+                        value={introduction}
+                        onChange={(e) => setIntroduction(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        rows="4"
+                        placeholder="Enter introduction text..."
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">📚 Detailed Explanation</label>
+                    <textarea
+                        value={detailedExplanation}
+                        onChange={(e) => setDetailedExplanation(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows="6"
+                        placeholder="Enter detailed explanation..."
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">🔗 Additional Resources</label>
+                    <textarea
+                        value={additionalResources}
+                        onChange={(e) => setAdditionalResources(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        rows="4"
+                        placeholder="Enter links, books, videos, additional reading..."
                     />
                 </div>
 
