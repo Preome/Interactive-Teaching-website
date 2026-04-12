@@ -49,6 +49,45 @@ router.put('/update-work/:workId', authMiddleware, async (req, res) => {
     }
 });
 
+// Gemini Practice for Programming subjects
+router.post('/gemini-practice', authMiddleware, async (req, res) => {
+    try {
+        if (req.userRole !== 'student') {
+            return res.status(403).json({ error: 'Only students can use Gemini practice' });
+        }
+
+        const { contentId, contentTitle, prompt } = req.body;
+        if (!prompt?.trim()) {
+            return res.status(400).json({ error: 'Prompt required' });
+        }
+
+        const { GoogleGenerativeAI } = require('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        const fullPrompt = `You are a coding tutor. The student is practicing from lesson "${contentTitle}".
+
+Student prompt: "${prompt}"
+
+Create:
+1. 2-3 practice coding problems (easy-medium)
+2. Step-by-step hints (no direct answers)
+3. Expected learning outcomes  
+4. Format as HTML with proper styling
+5. Keep educational and encouraging
+
+Lesson context: [Content ID: ${contentId}]`;
+
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response.text();
+
+        res.json({ response });
+    } catch (error) {
+        console.error('Gemini error:', error);
+        res.status(500).json({ error: 'AI service unavailable. Please try again.' });
+    }
+});
+
 // Save student annotations for specific content (inline editing)
 router.post('/save-annotations/:contentId', authMiddleware, async (req, res) => {
     try {

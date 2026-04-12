@@ -10,7 +10,7 @@ const StudentDashboard = ({ token, user }) => {
     const [selectedContent, setSelectedContent] = useState(null);
     const [showEditor, setShowEditor] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState('all');
-    const [selectedType, setSelectedType] = useState('all'); // 'all', 'regular', 'article'
+    const [selectedType, setSelectedType] = useState('all');
     const [myWorks, setMyWorks] = useState([]);
     const [activeTab, setActiveTab] = useState('browse');
     const [loading, setLoading] = useState(false);
@@ -30,7 +30,6 @@ const StudentDashboard = ({ token, user }) => {
         'other': 'Other Subjects'
     };
 
-    // Fetch contents
     const fetchContents = useCallback(async () => {
         setLoading(true);
         setError('');
@@ -51,7 +50,6 @@ const StudentDashboard = ({ token, user }) => {
         }
     }, [selectedSubject, token]);
 
-    // Fetch interactive articles
     const fetchArticles = useCallback(async () => {
         try {
             const url = selectedSubject === 'all' 
@@ -131,7 +129,6 @@ const StudentDashboard = ({ token, user }) => {
         return stats;
     };
 
-    // Combine and filter content based on type + search
     const getAllContent = useMemo(() => {
         let allItems = [];
         
@@ -142,7 +139,6 @@ const StudentDashboard = ({ token, user }) => {
             allItems.push(...articles.map(a => ({ ...a, itemType: 'article' })));
         }
 
-        // Apply search filter
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             allItems = allItems.filter(item => 
@@ -154,13 +150,12 @@ const StudentDashboard = ({ token, user }) => {
         }
         
         return allItems;
-    }, [contents, articles, selectedType, searchQuery]);
+    }, [contents, articles, selectedType, searchQuery, subjectNames]);
 
     const filteredContent = getAllContent;
 
     return (
         <div className="min-h-screen bg-gray-100">
-            {/* Header */}
             <header className="bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">
                 <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
                     <div>
@@ -183,7 +178,6 @@ const StudentDashboard = ({ token, user }) => {
             </header>
 
             <div className="max-w-7xl mx-auto px-4 py-8">
-                {/* Tab Navigation */}
                 <div className="flex gap-4 mb-8 border-b bg-white rounded-t-lg px-4">
                     <button
                         onClick={() => setActiveTab('browse')}
@@ -207,10 +201,8 @@ const StudentDashboard = ({ token, user }) => {
                     </button>
                 </div>
 
-                {/* Browse Content Tab */}
                 {activeTab === 'browse' && (
                     <>
-                        {/* Search Bar */}
                         <div className="bg-white rounded-xl shadow-lg mb-6 p-4 border border-gray-200">
                             <div className="flex items-center gap-3">
                                 <div className="relative flex-1">
@@ -218,7 +210,7 @@ const StudentDashboard = ({ token, user }) => {
                                         type="text"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder=" Search lessons, articles, subjects..."
+                                        placeholder="Search lessons, articles, subjects..."
                                         className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                                     />
                                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -240,10 +232,8 @@ const StudentDashboard = ({ token, user }) => {
                             </div>
                         </div>
 
-                        {/* Filters */}
                         <div className="bg-white rounded-lg shadow mb-6 p-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {/* Subject Filter */}
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">Filter by Subject:</label>
                                     <div className="flex flex-wrap gap-2">
@@ -263,7 +253,6 @@ const StudentDashboard = ({ token, user }) => {
                                     </div>
                                 </div>
                                 
-                                {/* Content Type Filter */}
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">Content Type:</label>
                                     <div className="flex gap-2 flex-wrap">
@@ -302,7 +291,6 @@ const StudentDashboard = ({ token, user }) => {
                             </div>
                         </div>
 
-                        {/* Loading State */}
                         {loading && (
                             <div className="text-center py-12">
                                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -310,7 +298,6 @@ const StudentDashboard = ({ token, user }) => {
                             </div>
                         )}
 
-                        {/* Error State */}
                         {error && !loading && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6">
                                 <div className="flex items-center gap-2">
@@ -320,7 +307,6 @@ const StudentDashboard = ({ token, user }) => {
                             </div>
                         )}
 
-                        {/* Content Grid */}
                         {!loading && !error && (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {filteredContent.length === 0 ? (
@@ -344,14 +330,12 @@ const StudentDashboard = ({ token, user }) => {
                                 ) : (
                                     filteredContent.map(item => (
                                         <div key={item._id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border hover:border-blue-200 group">
-                                            {/* Type Badge */}
                                             <div className={`px-4 py-2 text-white text-xs font-bold ${
                                                 item.itemType === 'article' ? 'bg-gradient-to-r from-purple-600 to-indigo-600' : 'bg-gradient-to-r from-blue-600 to-cyan-600'
                                             }`}>
                                                 {item.itemType === 'article' ? '📖 Interactive Article' : '📹 Multimedia Lesson'}
                                             </div>
                                             
-                                            {/* Preview */}
                                             <div className="h-40 bg-gradient-to-br relative overflow-hidden">
                                                 {item.itemType === 'regular' && getPreviewImage(item) ? (
                                                     <img 
@@ -382,7 +366,6 @@ const StudentDashboard = ({ token, user }) => {
                                                         : (item.description || 'Interactive multimedia lesson')}
                                                 </p>
                                                 
-                                                {/* Stats */}
                                                 <div className="flex flex-wrap gap-2 mb-5">
                                                     {item.itemType === 'regular' && (
                                                         <>
@@ -424,7 +407,27 @@ const StudentDashboard = ({ token, user }) => {
                                                     >
                                                         👁️ View Lesson
                                                     </button>
-                                                    {item.itemType === 'regular' && (
+                                                    {item.itemType === 'regular' && item.subject === 'programming' && (
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigate(`/gemini-practice/${item._id}`, {
+                                                                        state: { token, user }
+                                                                    });
+                                                                }}
+                                                                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 px-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm flex items-center gap-2 justify-center"
+                                                            >
+                                                                🤖 AI Practice
+                                                            </button>
+                                                            <button
+                                                                onClick={() => startWorking(item)}
+                                                                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm flex-1"
+                                                            >
+                                                                ✏️ Notes
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {item.itemType === 'regular' && item.subject !== 'programming' && (
                                                         <button
                                                             onClick={() => startWorking(item)}
                                                             className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
@@ -442,7 +445,6 @@ const StudentDashboard = ({ token, user }) => {
                     </>
                 )}
 
-                {/* My Work Tab */}
                 {activeTab === 'mywork' && (
                     <div className="bg-white rounded-2xl shadow-xl p-8">
                         <h2 className="text-3xl font-bold mb-8 flex items-center gap-3">
@@ -503,7 +505,6 @@ const StudentDashboard = ({ token, user }) => {
                 )}
             </div>
 
-            {/* Rich Text Editor Modal */}
             {showEditor && selectedContent && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
@@ -552,8 +553,6 @@ const StudentDashboard = ({ token, user }) => {
             )}
         </div>
     );
-
 };
 
 export default StudentDashboard;
-

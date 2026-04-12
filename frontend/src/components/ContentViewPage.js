@@ -11,7 +11,7 @@ const ContentViewPage = ({ token, user }) => {
     const [error, setError] = useState('');
     const [activeSection, setActiveSection] = useState(null);
     const [activePopup, setActivePopup] = useState(null);
-    const [showDebug, setShowDebug] = useState(false);
+
     const [editingArticle, setEditingArticle] = useState(null);
     const [annotatedText, setAnnotatedText] = useState('');
     const editorRef = useRef(null);

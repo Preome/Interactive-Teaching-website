@@ -4,7 +4,8 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentDashboard from './components/StudentDashboard';
-import ContentViewPage from './components/ContentViewPage';  // Change back to this
+import ContentViewPage from './components/ContentViewPage';
+import GeminiPractice from './components/GeminiPractice';
 
 function App() {
     const [token, setToken] = useState(localStorage.getItem('token'));
@@ -53,6 +54,11 @@ function App() {
                 <Route path="/content/:contentId" element={
                     <ProtectedRoute allowedRoles={['student', 'teacher']}>
                         <ContentViewPage token={token} user={user} />
+                    </ProtectedRoute>
+                } />
+                <Route path="/gemini-practice/:contentId" element={
+                    <ProtectedRoute allowedRoles={['student']}>
+                        <GeminiPractice token={token} user={user} />
                     </ProtectedRoute>
                 } />
                 
