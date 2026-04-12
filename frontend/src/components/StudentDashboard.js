@@ -6,6 +6,7 @@ import QuizList from './QuizList';
 import QuizTaker from './QuizTaker';
 import CodingTerminal from './CodingTerminal';
 import WorldMapViewer from './WorldMapViewer';
+import ScientificCalculator from './ScientificCalculator';
 
 const StudentDashboard = ({ token, user }) => {
     const navigate = useNavigate();
@@ -27,6 +28,8 @@ const StudentDashboard = ({ token, user }) => {
     const [showCodingTerminal, setShowCodingTerminal] = useState(false);
     const [showWorldMap, setShowWorldMap] = useState(false);
     const [selectedMapContent, setSelectedMapContent] = useState(null);
+    const [showCalculator, setShowCalculator] = useState(false);
+    const [selectedCalculatorContent, setSelectedCalculatorContent] = useState(null);
 
     const subjects = ['all', 'microsoft_word', 'excel', 'powerpoint', 'internet', 'bangla', 'english', 'math', 'science', 'geography', 'programming', 'coding', 'javascript', 'other'];
     const subjectNames = {
@@ -36,8 +39,8 @@ const StudentDashboard = ({ token, user }) => {
         'internet': 'Internet',
         'bangla': 'বাংলা (Bengali)',
         'english': 'English',
-        'math': 'Mathematics',
-        'science': 'Science',
+        'math': '🧮 Mathematics',
+        'science': '🔬 Science',
         'geography': '🌍 Geography',
         'programming': '💻 Programming',
         'coding': '💻 Coding',
@@ -150,6 +153,11 @@ const StudentDashboard = ({ token, user }) => {
         setShowWorldMap(true);
     };
 
+    const openCalculator = (content) => {
+        setSelectedCalculatorContent(content);
+        setShowCalculator(true);
+    };
+
     const getPreviewImage = (content) => {
         const imageElement = content.elements?.find(el => el.type === 'image');
         return imageElement ? imageElement.url : null;
@@ -175,6 +183,11 @@ const StudentDashboard = ({ token, user }) => {
     // Check if content is geography related
     const isGeographySubject = (subject) => {
         return subject === 'geography';
+    };
+
+    // Check if content is math related
+    const isMathSubject = (subject) => {
+        return subject === 'math' || subject === 'mathematics';
     };
 
     const getAllContent = useMemo(() => {
@@ -470,6 +483,11 @@ const StudentDashboard = ({ token, user }) => {
                                                             🌍 Interactive Map
                                                         </span>
                                                     )}
+                                                    {item.itemType === 'regular' && isMathSubject(item.subject) && (
+                                                        <span className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold shadow-sm">
+                                                            🧮 Scientific Calculator
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 
                                                 <div className="text-xs text-gray-500 mb-5 flex items-center justify-between">
@@ -511,6 +529,21 @@ const StudentDashboard = ({ token, user }) => {
                                                                 className="flex-1 bg-gradient-to-r from-green-600 to-teal-600 text-white py-2.5 px-4 rounded-xl hover:from-green-700 hover:to-teal-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
                                                             >
                                                                 🌍 Explore Map
+                                                            </button>
+                                                            <button
+                                                                onClick={() => startWorking(item)}
+                                                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+                                                            >
+                                                                ✏️ Notes
+                                                            </button>
+                                                        </>
+                                                    ) : item.itemType === 'regular' && isMathSubject(item.subject) ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => openCalculator(item)}
+                                                                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 px-4 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+                                                            >
+                                                                🧮 Calculator
                                                             </button>
                                                             <button
                                                                 onClick={() => startWorking(item)}
@@ -744,6 +777,17 @@ const StudentDashboard = ({ token, user }) => {
                     onClose={() => {
                         setShowWorldMap(false);
                         setSelectedMapContent(null);
+                    }}
+                />
+            )}
+
+            {/* Scientific Calculator Modal */}
+            {showCalculator && selectedCalculatorContent && (
+                <ScientificCalculator
+                    content={selectedCalculatorContent}
+                    onClose={() => {
+                        setShowCalculator(false);
+                        setSelectedCalculatorContent(null);
                     }}
                 />
             )}
