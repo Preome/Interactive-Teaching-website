@@ -1,7 +1,202 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactPlayer from 'react-player';
 
 const ContentViewer = ({ content, onClose, isTeacher = false }) => {
+    const [activePopup, setActivePopup] = useState(null);
+
+    const getSubjectName = (subject) => {
+        const subjectNames = {
+            'microsoft_word': 'Microsoft Word',
+            'excel': 'Excel',
+            'powerpoint': 'PowerPoint',
+            'internet': 'Internet',
+            'bangla': 'Bangla (Bengali)',
+            'english': 'English',
+            'math': 'Mathematics',
+            'science': 'Science',
+            'other': 'Other Subjects'
+        };
+        return subjectNames[subject] || subject;
+    };
+
+    // Render Interactive Article
+    const renderInteractiveArticle = (element, idx) => {
+        const text = element.content;
+        const interactiveItems = element.interactiveElements || [];
+        
+        // Function to split text and highlight words
+        const renderTextWithHighlights = () => {
+            if (!text) return [{ type: 'text', content: 'No content' }];
+            
+            let parts = [];
+            let lastIndex = 0;
+            
+            // Sort items by position in text
+            const sortedItems = [...interactiveItems].sort((a, b) => {
+                const posA = text.toLowerCase().indexOf(a.word.toLowerCase());
+                const posB = text.toLowerCase().indexOf(b.word.toLowerCase());
+                return posA - posB;
+            });
+            
+            sortedItems.forEach((item, itemIdx) => {
+                const wordIndex = text.toLowerCase().indexOf(item.word.toLowerCase(), lastIndex);
+                if (wordIndex !== -1) {
+                    // Add text before the word
+                    if (wordIndex > lastIndex) {
+                        parts.push({
+                            type: 'text',
+                            content: text.substring(lastIndex, wordIndex)
+                        });
+                    }
+                    // Add the interactive word
+                    parts.push({
+                        type: 'interactive',
+                        content: text.substring(wordIndex, wordIndex + item.word.length),
+                        word: item.word,
+                        emoji: item.emoji || '📝',
+                        mediaType: item.mediaType,
+                        explanation: item.explanation,
+                        mediaUrl: item.mediaUrl,
+                        mediaFileName: item.mediaFileName,
+                        index: itemIdx
+                    });
+                    lastIndex = wordIndex + item.word.length;
+                }
+            });
+            
+            // Add remaining text
+            if (lastIndex < text.length) {
+                parts.push({
+                    type: 'text',
+                    content: text.substring(lastIndex)
+                });
+            }
+            
+            return parts;
+        };
+        
+        const parts = renderTextWithHighlights();
+        
+        return (
+            <div key={idx} className="mb-6 p-6 bg-white rounded-lg shadow-md">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                    <span className="text-2xl">📰</span>
+                    <h3 className="font-bold text-lg text-gray-800">Interactive Article</h3>
+                    <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full">
+                        {interactiveItems.length} interactive word(s)
+                    </span>
+                </div>
+                
+                <div className="prose max-w-none leading-relaxed">
+                    {parts.map((part, partIdx) => {
+                        if (part.type === 'interactive') {
+                            const isOpen = activePopup === `${idx}-${partIdx}`;
+                            return (
+                                <span key={partIdx} className="relative inline-block">
+                                    <button
+                                        onClick={() => setActivePopup(isOpen ? null : `${idx}-${partIdx}`)}
+                                        className="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-100 to-yellow-200 hover:from-yellow-200 hover:to-yellow-300 rounded-lg px-2 py-1 mx-0.5 transition cursor-pointer shadow-sm"
+                                    >
+                                        <span className="text-lg">{part.emoji}</span>
+                                        <span className="font-semibold">{part.content}</span>
+                                        {part.mediaType === 'image' && <span className="text-xs">🖼️</span>}
+                                        {part.mediaType === 'video' && <span className="text-xs">🎬</span>}
+                                        {part.mediaType === 'audio' && <span className="text-xs">🎵</span>}
+                                        {part.mediaType === 'text' && <span className="text-xs">📝</span>}
+                                    </button>
+                                    
+                                    {isOpen && (
+                                        <div 
+                                            className="absolute z-20 mt-2 w-80 md:w-96 bg-white rounded-xl shadow-2xl border-2 overflow-hidden"
+                                            style={{ left: '50%', transform: 'translateX(-50%)' }}
+                                        >
+                                            <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-3 flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-2xl">{part.emoji}</span>
+                                                    <span className="font-bold">{part.word}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => setActivePopup(null)}
+                                                    className="text-white hover:text-gray-200 text-xl"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="p-4 max-h-96 overflow-y-auto">
+                                                {part.mediaType === 'text' && (
+                                                    <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                                        {part.explanation || 'No explanation provided.'}
+                                                    </div>
+                                                )}
+                                                
+                                                {part.mediaType === 'image' && part.mediaUrl && (
+                                                    <div>
+                                                        <img 
+                                                            src={part.mediaUrl} 
+                                                            alt={part.word}
+                                                            className="w-full rounded-lg shadow-md"
+                                                            onError={(e) => {
+                                                                console.error('Image failed to load:', part.mediaUrl);
+                                                                e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                                                            }}
+                                                        />
+                                                        {part.explanation && (
+                                                            <p className="text-sm text-gray-600 mt-3">{part.explanation}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                
+                                                {part.mediaType === 'video' && part.mediaUrl && (
+                                                    <div>
+                                                        <video controls className="w-full rounded-lg shadow-md">
+                                                            <source src={part.mediaUrl} />
+                                                            Your browser does not support video.
+                                                        </video>
+                                                        {part.explanation && (
+                                                            <p className="text-sm text-gray-600 mt-3">{part.explanation}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                
+                                                {part.mediaType === 'audio' && part.mediaUrl && (
+                                                    <div>
+                                                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                                                            <div className="text-4xl">🎵</div>
+                                                            <audio controls className="flex-1">
+                                                                <source src={part.mediaUrl} />
+                                                            </audio>
+                                                        </div>
+                                                        {part.explanation && (
+                                                            <p className="text-sm text-gray-600 mt-3">{part.explanation}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                
+                                                {part.mediaType !== 'text' && !part.mediaUrl && (
+                                                    <div className="text-center py-8 text-gray-500">
+                                                        <div className="text-4xl mb-2">⚠️</div>
+                                                        <p>Media file not available</p>
+                                                        <p className="text-xs mt-2">Please re-upload the content with the media file</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="bg-gray-50 p-2 text-center text-xs text-gray-500">
+                                                Click ✕ to close
+                                            </div>
+                                        </div>
+                                    )}
+                                </span>
+                            );
+                        }
+                        return <span key={partIdx}>{part.content}</span>;
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     const renderElement = (element, index) => {
         switch (element.type) {
             case 'text':
@@ -10,6 +205,9 @@ const ContentViewer = ({ content, onClose, isTeacher = false }) => {
                         <p className="text-gray-800 whitespace-pre-wrap">{element.content}</p>
                     </div>
                 );
+                
+            case 'interactive_text':
+                return renderInteractiveArticle(element, index);
                 
             case 'image':
                 return (
@@ -32,7 +230,7 @@ const ContentViewer = ({ content, onClose, isTeacher = false }) => {
                 return (
                     <div key={index} className="mb-4">
                         <div className="bg-black rounded-lg overflow-hidden">
-                            <video controls className="w-full" poster="/video-poster.jpg">
+                            <video controls className="w-full">
                                 <source src={element.url} type="video/mp4" />
                                 Your browser does not support the video tag.
                             </video>
@@ -71,11 +269,6 @@ const ContentViewer = ({ content, onClose, isTeacher = false }) => {
                                 width="100%"
                                 height="100%"
                                 controls
-                                config={{
-                                    youtube: {
-                                        playerVars: { showinfo: 1 }
-                                    }
-                                }}
                             />
                         </div>
                         {element.content && (
@@ -87,18 +280,6 @@ const ContentViewer = ({ content, onClose, isTeacher = false }) => {
             default:
                 return null;
         }
-    };
-
-    // Get subject name for display
-    const getSubjectName = (subject) => {
-        const subjectNames = {
-            'microsoft_word': 'Microsoft Word',
-            'excel': 'Excel',
-            'powerpoint': 'PowerPoint',
-            'internet': 'Internet',
-            'other': 'Other Subjects'
-        };
-        return subjectNames[subject] || subject;
     };
 
     return (
@@ -135,8 +316,9 @@ const ContentViewer = ({ content, onClose, isTeacher = false }) => {
                     )}
                     
                     {/* Content Stats */}
-                    <div className="mb-6 flex gap-4 text-sm text-gray-600 border-b pb-3">
+                    <div className="mb-6 flex flex-wrap gap-4 text-sm text-gray-600 border-b pb-3">
                         <span>📝 {content.elements?.filter(el => el.type === 'text').length || 0} texts</span>
+                        <span>📰 {content.elements?.filter(el => el.type === 'interactive_text').length || 0} interactive articles</span>
                         <span>🖼️ {content.elements?.filter(el => el.type === 'image').length || 0} images</span>
                         <span>🎬 {content.elements?.filter(el => el.type === 'video').length || 0} videos</span>
                         <span>🎵 {content.elements?.filter(el => el.type === 'audio').length || 0} audio</span>

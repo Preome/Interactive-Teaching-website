@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ContentUpload from './ContentUpload';
-import ContentViewer from './ContentViewer';
 
 const TeacherDashboard = ({ token, user }) => {
+    const navigate = useNavigate();
     const [contents, setContents] = useState([]);
-    const [selectedContent, setSelectedContent] = useState(null);
     const [activeTab, setActiveTab] = useState('upload');
     const [editingContent, setEditingContent] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const subjectNames = {
         'microsoft_word': 'Microsoft Word',
@@ -38,13 +39,16 @@ const TeacherDashboard = ({ token, user }) => {
 
     const fetchContents = useCallback(async () => {
         setLoading(true);
+        setError('');
         try {
             const response = await axios.get('http://localhost:5000/api/content/all', {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            console.log('Fetched contents:', response.data);
             setContents(response.data);
         } catch (error) {
             console.error('Error fetching contents:', error);
+            setError('Failed to load contents. Please refresh the page.');
         } finally {
             setLoading(false);
         }
@@ -60,11 +64,11 @@ const TeacherDashboard = ({ token, user }) => {
                 await axios.delete(`http://localhost:5000/api/content/${contentId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                alert('Content deleted successfully');
+                alert('✅ Content deleted successfully');
                 fetchContents();
             } catch (error) {
                 console.error('Delete error:', error);
-                alert('Error deleting content: ' + (error.response?.data?.error || error.message));
+                alert('❌ Error deleting content: ' + (error.response?.data?.error || error.message));
             }
         }
     };
@@ -72,6 +76,7 @@ const TeacherDashboard = ({ token, user }) => {
     const handleEdit = (content) => {
         setEditingContent(content);
         setShowEditModal(true);
+        setActiveTab('upload');
     };
 
     const handleUploadSuccess = () => {
@@ -81,8 +86,20 @@ const TeacherDashboard = ({ token, user }) => {
         setEditingContent(null);
     };
 
+    const handleCancelEdit = () => {
+        setShowEditModal(false);
+        setEditingContent(null);
+        setActiveTab('manage');
+    };
+
+    const handleViewContent = (contentId) => {
+        // Navigate to full page content view
+        navigate(`/content/${contentId}`);
+    };
+
     const getContentTypeIcon = (content) => {
         if (content.contentType === 'interactive_article') return '📰';
+        if (content.elements?.some(el => el.type === 'interactive_text')) return '📰';
         if (content.elements?.some(el => el.type === 'youtube')) return '📺';
         if (content.elements?.some(el => el.type === 'video')) return '🎬';
         if (content.elements?.some(el => el.type === 'audio')) return '🎵';
@@ -90,12 +107,24 @@ const TeacherDashboard = ({ token, user }) => {
         return '📄';
     };
 
+    const getContentStats = (content) => {
+        const stats = {
+            text: content.elements?.filter(el => el.type === 'text').length || 0,
+            images: content.elements?.filter(el => el.type === 'image' && el.url).length || 0,
+            videos: content.elements?.filter(el => el.type === 'video' && el.url).length || 0,
+            audio: content.elements?.filter(el => el.type === 'audio' && el.url).length || 0,
+            youtube: content.elements?.filter(el => el.type === 'youtube').length || 0,
+            interactive: content.elements?.filter(el => el.type === 'interactive_text').length || 0
+        };
+        return stats;
+    };
+
     return (
         <div className="min-h-screen bg-gray-100">
-            <header className="bg-white shadow">
+            <header className="bg-white shadow-md">
                 <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-800">Teacher Dashboard</h1>
+                        <h1 className="text-2xl font-bold text-gray-800">👨‍🏫 Teacher Dashboard</h1>
                         <p className="text-sm text-gray-500">Manage your interactive classroom content</p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -103,9 +132,9 @@ const TeacherDashboard = ({ token, user }) => {
                         <button 
                             onClick={() => {
                                 localStorage.clear();
-                                window.location.reload();
+                                window.location.href = '/login';
                             }} 
-                            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
                         >
                             Logout
                         </button>
@@ -119,8 +148,8 @@ const TeacherDashboard = ({ token, user }) => {
                     <button
                         onClick={() => {
                             setActiveTab('upload');
-                            setEditingContent(null);
                             setShowEditModal(false);
+                            setEditingContent(null);
                         }}
                         className={`py-3 px-6 font-medium transition ${
                             activeTab === 'upload' && !showEditModal
@@ -145,6 +174,13 @@ const TeacherDashboard = ({ token, user }) => {
                     </button>
                 </div>
 
+                {/* Error Display */}
+                {error && (
+                    <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                        {error}
+                    </div>
+                )}
+
                 {/* Upload Content Tab */}
                 {activeTab === 'upload' && !showEditModal && (
                     <ContentUpload token={token} onUploadSuccess={handleUploadSuccess} />
@@ -152,15 +188,12 @@ const TeacherDashboard = ({ token, user }) => {
 
                 {/* Edit Content Modal */}
                 {showEditModal && editingContent && (
-                    <div>
+                    <div className="mb-6">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-2xl font-bold">✏️ Editing: {editingContent.title}</h2>
                             <button
-                                onClick={() => {
-                                    setShowEditModal(false);
-                                    setEditingContent(null);
-                                }}
-                                className="text-gray-500 hover:text-gray-700"
+                                onClick={handleCancelEdit}
+                                className="text-gray-500 hover:text-gray-700 px-4 py-2 bg-gray-100 rounded-lg"
                             >
                                 Cancel Edit
                             </button>
@@ -179,92 +212,100 @@ const TeacherDashboard = ({ token, user }) => {
                     <div>
                         {loading ? (
                             <div className="text-center py-12">
-                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
                                 <p className="mt-4 text-gray-600">Loading content...</p>
                             </div>
                         ) : contents.length === 0 ? (
                             <div className="bg-white rounded-lg shadow p-12 text-center">
+                                <div className="text-6xl mb-4">📭</div>
                                 <p className="text-gray-500 text-lg">No content uploaded yet.</p>
                                 <p className="text-gray-400 mt-2">Click "Upload Content" to add your first lesson!</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {contents.map(content => (
-                                    <div key={content._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 duration-300">
-                                        {/* Preview Header */}
-                                        <div className="h-32 bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center justify-center relative">
-                                            <div className="text-center text-white">
-                                                <div className="text-5xl mb-2">{getContentTypeIcon(content)}</div>
-                                                <p className="text-sm font-medium">{subjectNames[content.subject] || content.subject}</p>
-                                            </div>
-                                            {content.contentType === 'interactive_article' && (
-                                                <div className="absolute top-2 right-2">
-                                                    <span className="text-xs bg-indigo-500 text-white px-2 py-1 rounded-full">
-                                                        Interactive
-                                                    </span>
+                                {contents.map(content => {
+                                    const stats = getContentStats(content);
+                                    return (
+                                        <div key={content._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 duration-300">
+                                            {/* Preview Header */}
+                                            <div className="h-32 bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center justify-center relative">
+                                                <div className="text-center text-white">
+                                                    <div className="text-5xl mb-2">{getContentTypeIcon(content)}</div>
+                                                    <p className="text-sm font-medium">{subjectNames[content.subject] || content.subject}</p>
                                                 </div>
-                                            )}
+                                                {(content.contentType === 'interactive_article' || stats.interactive > 0) && (
+                                                    <div className="absolute top-2 right-2">
+                                                        <span className="text-xs bg-indigo-500 text-white px-2 py-1 rounded-full">
+                                                            📰 Interactive
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="p-5">
+                                                <h3 className="font-bold text-xl text-gray-800 mb-2 line-clamp-1">{content.title}</h3>
+                                                <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
+                                                    {content.description || 'No description provided'}
+                                                </p>
+                                                
+                                                {/* Content Stats */}
+                                                <div className="flex flex-wrap gap-2 mb-4">
+                                                    {stats.text > 0 && (
+                                                        <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">📝 {stats.text}</span>
+                                                    )}
+                                                    {stats.interactive > 0 && (
+                                                        <span className="bg-indigo-100 text-indigo-600 px-2 py-1 rounded text-xs">📰 {stats.interactive} Article(s)</span>
+                                                    )}
+                                                    {stats.images > 0 && (
+                                                        <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-xs">🖼️ {stats.images}</span>
+                                                    )}
+                                                    {stats.videos > 0 && (
+                                                        <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">🎬 {stats.videos}</span>
+                                                    )}
+                                                    {stats.audio > 0 && (
+                                                        <span className="bg-yellow-100 text-yellow-600 px-2 py-1 rounded text-xs">🎵 {stats.audio}</span>
+                                                    )}
+                                                    {stats.youtube > 0 && (
+                                                        <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs">📺 {stats.youtube}</span>
+                                                    )}
+                                                </div>
+                                                
+                                                <div className="text-xs text-gray-400 mb-4 flex items-center justify-between">
+                                                    <span>📅 {new Date(content.createdAt).toLocaleDateString()}</span>
+                                                    {content.contentType === 'interactive_article' && (
+                                                        <span className="text-indigo-500">✨ Interactive</span>
+                                                    )}
+                                                </div>
+                                                
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleViewContent(content._id)}
+                                                        className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+                                                    >
+                                                        👁️ View Content
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEdit(content)}
+                                                        className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition font-medium text-sm"
+                                                    >
+                                                        ✏️ Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(content._id)}
+                                                        className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm"
+                                                    >
+                                                        🗑️ Delete
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        
-                                        <div className="p-5">
-                                            <h3 className="font-bold text-xl text-gray-800 mb-2 line-clamp-1">{content.title}</h3>
-                                            <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
-                                                {content.description || 'No description provided'}
-                                            </p>
-                                            
-                                            {/* Content Stats */}
-                                            <div className="flex flex-wrap gap-2 mb-4">
-                                                {content.elements?.filter(el => el.type === 'text').length > 0 && (
-                                                    <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">📝 {content.elements.filter(el => el.type === 'text').length}</span>
-                                                )}
-                                                {content.elements?.filter(el => el.type === 'interactive_text').length > 0 && (
-                                                    <span className="bg-indigo-100 text-indigo-600 px-2 py-1 rounded text-xs">📰 Interactive</span>
-                                                )}
-                                                {content.elements?.filter(el => el.type === 'image').length > 0 && (
-                                                    <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-xs">🖼️ {content.elements.filter(el => el.type === 'image').length}</span>
-                                                )}
-                                                {content.elements?.filter(el => el.type === 'video').length > 0 && (
-                                                    <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">🎬 {content.elements.filter(el => el.type === 'video').length}</span>
-                                                )}
-                                            </div>
-                                            
-                                            <div className="text-xs text-gray-400 mb-4">
-                                                📅 {new Date(content.createdAt).toLocaleDateString()}
-                                            </div>
-                                            
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => setSelectedContent(content)}
-                                                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
-                                                >
-                                                    👁️ View
-                                                </button>
-                                                <button
-                                                    onClick={() => handleEdit(content)}
-                                                    className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition font-medium text-sm"
-                                                >
-                                                    ✏️ Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(content._id)}
-                                                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm"
-                                                >
-                                                    🗑️ Delete
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
                 )}
             </div>
-
-            {/* Content Viewer Modal */}
-            {selectedContent && (
-                <ContentViewer content={selectedContent} onClose={() => setSelectedContent(null)} isTeacher={true} />
-            )}
         </div>
     );
 };

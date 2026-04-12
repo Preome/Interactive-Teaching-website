@@ -13,51 +13,103 @@ function App() {
         return savedUser ? JSON.parse(savedUser) : null;
     });
 
+    // Protected Route wrapper component
     const ProtectedRoute = ({ children, allowedRoles }) => {
+        // Check if user is authenticated
         if (!token || !user) {
             return <Navigate to="/login" replace />;
         }
+        // Check if user has required role
         if (allowedRoles && !allowedRoles.includes(user.role)) {
-            return <Navigate to="/" replace />;
+            // Redirect to appropriate dashboard based on role
+            const redirectPath = user.role === 'teacher' ? '/teacher' : '/student';
+            return <Navigate to={redirectPath} replace />;
         }
         return children;
     };
 
+    // Public routes (no authentication needed)
+    // Protected routes (authentication required)
+
     return (
         <Router>
             <Routes>
-                <Route path="/login" element={
-                    !token ? <Login setToken={setToken} setUser={setUser} /> : 
-                    <Navigate to={user?.role === 'teacher' ? '/teacher' : '/student'} replace />
-                } />
+                {/* Public Routes */}
+                <Route 
+                    path="/login" 
+                    element={
+                        !token ? (
+                            <Login setToken={setToken} setUser={setUser} />
+                        ) : (
+                            <Navigate to={user?.role === 'teacher' ? '/teacher' : '/student'} replace />
+                        )
+                    } 
+                />
                 
-                <Route path="/signup" element={
-                    !token ? <Signup setToken={setToken} setUser={setUser} /> : 
-                    <Navigate to={user?.role === 'teacher' ? '/teacher' : '/student'} replace />
-                } />
+                <Route 
+                    path="/signup" 
+                    element={
+                        !token ? (
+                            <Signup setToken={setToken} setUser={setUser} />
+                        ) : (
+                            <Navigate to={user?.role === 'teacher' ? '/teacher' : '/student'} replace />
+                        )
+                    } 
+                />
                 
-                <Route path="/teacher" element={
-                    <ProtectedRoute allowedRoles={['teacher']}>
-                        <TeacherDashboard token={token} user={user} />
-                    </ProtectedRoute>
-                } />
+                {/* Teacher Protected Routes */}
+                <Route 
+                    path="/teacher" 
+                    element={
+                        <ProtectedRoute allowedRoles={['teacher']}>
+                            <TeacherDashboard token={token} user={user} />
+                        </ProtectedRoute>
+                    } 
+                />
                 
-                <Route path="/student" element={
-                    <ProtectedRoute allowedRoles={['student']}>
-                        <StudentDashboard token={token} user={user} />
-                    </ProtectedRoute>
-                } />
+                {/* Student Protected Routes */}
+                <Route 
+                    path="/student" 
+                    element={
+                        <ProtectedRoute allowedRoles={['student']}>
+                            <StudentDashboard token={token} user={user} />
+                        </ProtectedRoute>
+                    } 
+                />
                 
-                {/* This is the separate page for viewing content */}
-                <Route path="/content/:contentId" element={
-                    <ProtectedRoute allowedRoles={['student', 'teacher']}>
-                        <ContentViewPage token={token} user={user} />
-                    </ProtectedRoute>
-                } />
+                {/* Content View Page - Accessible by both teachers and students */}
+                <Route 
+                    path="/content/:contentId" 
+                    element={
+                        <ProtectedRoute allowedRoles={['student', 'teacher']}>
+                            <ContentViewPage token={token} user={user} />
+                        </ProtectedRoute>
+                    } 
+                />
                 
-                <Route path="/" element={
-                    <Navigate to={token ? (user?.role === 'teacher' ? '/teacher' : '/student') : '/login'} replace />
-                } />
+                {/* Default Route - Redirect based on authentication and role */}
+                <Route 
+                    path="/" 
+                    element={
+                        token ? (
+                            user?.role === 'teacher' ? (
+                                <Navigate to="/teacher" replace />
+                            ) : (
+                                <Navigate to="/student" replace />
+                            )
+                        ) : (
+                            <Navigate to="/login" replace />
+                        )
+                    } 
+                />
+                
+                {/* Catch all - redirect to home */}
+                <Route 
+                    path="*" 
+                    element={
+                        <Navigate to="/" replace />
+                    } 
+                />
             </Routes>
         </Router>
     );
