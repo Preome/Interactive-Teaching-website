@@ -9,7 +9,6 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
     const [currentText, setCurrentText] = useState('');
     const [currentYoutubeUrl, setCurrentYoutubeUrl] = useState('');
     
-    // Separate state for different media types
     const [selectedImages, setSelectedImages] = useState([]);
     const [selectedVideos, setSelectedVideos] = useState([]);
     const [selectedAudios, setSelectedAudios] = useState([]);
@@ -45,40 +44,51 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
         
         const formData = new FormData();
         
-        // Prepare elements data
+        // Create elements array in the order files will be uploaded
         const elementsData = [...elements];
         
-        // Add image elements
-        selectedImages.forEach((file, index) => {
-            formData.append('media', file);
-            elementsData.push({
-                type: 'image',
-                content: file.name,
-                order: elements.length + index,
-                tempFile: file.name
-            });
-        });
+        // Track all files to upload
+        const allFiles = [];
         
-        // Add video elements
-        selectedVideos.forEach((file, index) => {
-            formData.append('media', file);
-            elementsData.push({
-                type: 'video',
-                content: file.name,
-                order: elements.length + selectedImages.length + index,
-                tempFile: file.name
+        // Add images
+        if (selectedImages.length > 0) {
+            selectedImages.forEach((file) => {
+                allFiles.push(file);
+                elementsData.push({
+                    type: 'image',
+                    content: file.name,
+                    order: elementsData.length
+                });
             });
-        });
+        }
         
-        // Add audio elements
-        selectedAudios.forEach((file, index) => {
-            formData.append('media', file);
-            elementsData.push({
-                type: 'audio',
-                content: file.name,
-                order: elements.length + selectedImages.length + selectedVideos.length + index,
-                tempFile: file.name
+        // Add videos
+        if (selectedVideos.length > 0) {
+            selectedVideos.forEach((file) => {
+                allFiles.push(file);
+                elementsData.push({
+                    type: 'video',
+                    content: file.name,
+                    order: elementsData.length
+                });
             });
+        }
+        
+        // Add audio
+        if (selectedAudios.length > 0) {
+            selectedAudios.forEach((file) => {
+                allFiles.push(file);
+                elementsData.push({
+                    type: 'audio',
+                    content: file.name,
+                    order: elementsData.length
+                });
+            });
+        }
+        
+        // Append all files to formData
+        allFiles.forEach((file) => {
+            formData.append('media', file);
         });
         
         formData.append('data', JSON.stringify({ 
@@ -88,15 +98,25 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
             elements: elementsData 
         }));
 
+        console.log('Uploading:', {
+            textElements: elements.filter(e => e.type === 'text').length,
+            youtubeElements: elements.filter(e => e.type === 'youtube').length,
+            images: selectedImages.length,
+            videos: selectedVideos.length,
+            audios: selectedAudios.length,
+            totalFiles: allFiles.length
+        });
+
         try {
-            await axios.post('http://localhost:5000/api/content/upload', formData, {
+            const response = await axios.post('http://localhost:5000/api/content/upload', formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data'
                 }
             });
             
-            alert('Content uploaded successfully!');
+            console.log('Upload success:', response.data);
+            alert(`Success! Uploaded ${allFiles.length} file(s) successfully.`);
             
             // Reset form
             setTitle('');
@@ -117,7 +137,11 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
         }
     };
 
-    const removeElement = (index) => {
+    const removeTextElement = (index) => {
+        setElements(elements.filter((_, i) => i !== index));
+    };
+
+    const removeYoutubeElement = (index) => {
         setElements(elements.filter((_, i) => i !== index));
     };
 
@@ -198,6 +222,12 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
                                 Add Text
                             </button>
                         </div>
+                        {elements.filter(el => el.type === 'text').map((el, idx) => (
+                            <div key={idx} className="mt-2 p-2 bg-blue-50 rounded flex justify-between items-center">
+                                <span className="text-sm">📝 {el.content.substring(0, 50)}...</span>
+                                <button type="button" onClick={() => removeTextElement(elements.indexOf(el))} className="text-red-500">Remove</button>
+                            </div>
+                        ))}
                     </div>
 
                     {/* YouTube Link Addition */}
@@ -219,6 +249,12 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
                                 Add YouTube
                             </button>
                         </div>
+                        {elements.filter(el => el.type === 'youtube').map((el, idx) => (
+                            <div key={idx} className="mt-2 p-2 bg-red-50 rounded flex justify-between items-center">
+                                <span className="text-sm">📺 {el.url}</span>
+                                <button type="button" onClick={() => removeYoutubeElement(elements.indexOf(el))} className="text-red-500">Remove</button>
+                            </div>
+                        ))}
                     </div>
 
                     {/* Images Upload Section */}
@@ -237,7 +273,7 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     {selectedImages.map((file, idx) => (
                                         <span key={idx} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm flex items-center gap-2">
-                                            📷 {file.name}
+                                            🖼️ {file.name}
                                             <button type="button" onClick={() => removeImage(idx)} className="text-red-500">×</button>
                                         </span>
                                     ))}
@@ -262,7 +298,7 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     {selectedVideos.map((file, idx) => (
                                         <span key={idx} className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-sm flex items-center gap-2">
-                                            🎥 {file.name}
+                                            🎬 {file.name}
                                             <button type="button" onClick={() => removeVideo(idx)} className="text-red-500">×</button>
                                         </span>
                                     ))}
@@ -295,28 +331,12 @@ const ContentUpload = ({ token, onUploadSuccess }) => {
                             </div>
                         )}
                     </div>
-
-                    {/* Added Text and YouTube Elements Preview */}
-                    {elements.length > 0 && (
-                        <div className="mb-4 p-4 bg-yellow-50 rounded-lg">
-                            <h4 className="font-bold mb-2">📋 Added Elements ({elements.length})</h4>
-                            {elements.map((el, idx) => (
-                                <div key={idx} className="flex justify-between items-center text-sm text-gray-600 mb-1">
-                                    <span>
-                                        {el.type === 'text' ? `📝 Text: ${el.content.substring(0, 50)}...` :
-                                         el.type === 'youtube' ? `📺 YouTube Video` : ''}
-                                    </span>
-                                    <button type="button" onClick={() => removeElement(idx)} className="text-red-500">Remove</button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
                 </div>
 
                 <button 
                     type="submit" 
                     disabled={uploading}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
                 >
                     {uploading ? 'Uploading...' : 'Upload Content'}
                 </button>

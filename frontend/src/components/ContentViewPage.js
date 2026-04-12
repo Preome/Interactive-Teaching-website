@@ -9,6 +9,7 @@ const ContentViewPage = ({ token, user }) => {
     const [content, setContent] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [activeSection, setActiveSection] = useState(null);
 
     useEffect(() => {
         fetchContent();
@@ -16,15 +17,25 @@ const ContentViewPage = ({ token, user }) => {
 
     const fetchContent = async () => {
         try {
+            console.log('Fetching content:', contentId);
             const response = await axios.get(`http://localhost:5000/api/content/${contentId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            console.log('Content received:', response.data);
             setContent(response.data);
             setLoading(false);
         } catch (error) {
             console.error('Error fetching content:', error);
             setError('Failed to load content');
             setLoading(false);
+        }
+    };
+
+    const toggleSection = (section) => {
+        if (activeSection === section) {
+            setActiveSection(null);
+        } else {
+            setActiveSection(section);
         }
     };
 
@@ -39,110 +50,130 @@ const ContentViewPage = ({ token, user }) => {
         return subjectNames[subject] || subject;
     };
 
-    const renderElement = (element, index) => {
-        switch (element.type) {
-            case 'text':
-                return (
-                    <div key={index} className="mb-6 p-6 bg-white rounded-lg shadow-md">
-                        <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{element.content}</p>
-                    </div>
-                );
-                
-            case 'image':
-                return (
-                    <div key={index} className="mb-6 bg-white rounded-lg shadow-md overflow-hidden">
-                        <div className="p-4 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700">📷 Image</h3>
-                        </div>
-                        <div className="p-4">
-                            <img 
-                                src={element.url} 
-                                alt={element.content || 'Image'} 
-                                className="max-w-full h-auto rounded-lg mx-auto"
-                                loading="lazy"
-                            />
-                            {element.content && (
-                                <p className="text-sm text-gray-500 mt-3 text-center">{element.content}</p>
-                            )}
-                        </div>
-                    </div>
-                );
-                
-            case 'video':
-                return (
-                    <div key={index} className="mb-6 bg-white rounded-lg shadow-md overflow-hidden">
-                        <div className="p-4 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700">🎬 Video</h3>
-                        </div>
-                        <div className="p-4">
-                            <video controls className="w-full rounded-lg" controlsList="nodownload">
-                                <source src={element.url} type="video/mp4" />
-                                Your browser does not support the video tag.
-                            </video>
-                            {element.content && (
-                                <p className="text-sm text-gray-500 mt-3">{element.content}</p>
-                            )}
-                        </div>
-                    </div>
-                );
-                
-            case 'audio':
-                return (
-                    <div key={index} className="mb-6 bg-white rounded-lg shadow-md overflow-hidden">
-                        <div className="p-4 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700">🎵 Audio</h3>
-                        </div>
-                        <div className="p-6">
-                            <div className="flex items-center gap-4">
-                                <div className="text-5xl">🎵</div>
-                                <div className="flex-1">
-                                    <audio controls className="w-full">
-                                        <source src={element.url} />
-                                        Your browser does not support the audio element.
-                                    </audio>
+    const getElementsByType = (type) => {
+        if (!content || !content.elements) return [];
+        // For media types, only return elements that have valid URLs
+        if (type === 'images') {
+            return content.elements.filter(el => el.type === 'image' && el.url);
+        }
+        if (type === 'videos') {
+            return content.elements.filter(el => el.type === 'video' && el.url);
+        }
+        if (type === 'audio') {
+            return content.elements.filter(el => el.type === 'audio' && el.url);
+        }
+        return content.elements.filter(el => el.type === type);
+    };
+
+    const getContentCounts = () => {
+        if (!content || !content.elements) {
+            return { text: 0, images: 0, videos: 0, audio: 0, youtube: 0 };
+        }
+        return {
+            text: content.elements.filter(el => el.type === 'text').length,
+            images: content.elements.filter(el => el.type === 'image' && el.url).length,
+            videos: content.elements.filter(el => el.type === 'video' && el.url).length,
+            audio: content.elements.filter(el => el.type === 'audio' && el.url).length,
+            youtube: content.elements.filter(el => el.type === 'youtube').length
+        };
+    };
+
+    const renderContentByType = () => {
+        if (!activeSection) return null;
+        
+        const elements = getElementsByType(activeSection);
+        
+        if (elements.length === 0) {
+            return (
+                <div className="text-center py-8 text-gray-500">
+                    <p>No {activeSection} content available</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-6 animate-fadeIn">
+                {elements.map((element, idx) => {
+                    switch (activeSection) {
+                        case 'text':
+                            return (
+                                <div key={idx} className="p-6 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{element.content}</p>
+                                </div>
+                            );
+                        case 'images':
+                            return (
+                                <div key={idx} className="bg-gray-100 rounded-lg p-4">
+                                    <img 
+                                        src={element.url} 
+                                        alt={element.content || 'Image'} 
+                                        className="max-w-full h-auto rounded-lg mx-auto shadow-md"
+                                        loading="lazy"
+                                        onError={(e) => {
+                                            console.error('Image failed to load:', element.url);
+                                            e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                                        }}
+                                    />
                                     {element.content && (
-                                        <p className="text-sm text-gray-500 mt-2">{element.content}</p>
+                                        <p className="text-sm text-gray-500 mt-3 text-center">{element.content}</p>
                                     )}
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-                
-            case 'youtube':
-                return (
-                    <div key={index} className="mb-6 bg-white rounded-lg shadow-md overflow-hidden">
-                        <div className="p-4 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700">📺 YouTube Video</h3>
-                        </div>
-                        <div className="p-4">
-                            <div className="relative pb-[56.25%] h-0 rounded-lg overflow-hidden">
-                                <ReactPlayer
-                                    url={element.url}
-                                    className="absolute top-0 left-0"
-                                    width="100%"
-                                    height="100%"
-                                    controls
-                                />
-                            </div>
-                            {element.content && (
-                                <p className="text-sm text-gray-500 mt-3">{element.content}</p>
-                            )}
-                        </div>
-                    </div>
-                );
-                
-            default:
-                return null;
-        }
+                            );
+                        case 'videos':
+                            return (
+                                <div key={idx} className="bg-black rounded-lg overflow-hidden shadow-lg">
+                                    <video controls className="w-full">
+                                        <source src={element.url} type="video/mp4" />
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    {element.content && (
+                                        <p className="text-sm text-gray-300 mt-2 p-3">{element.content}</p>
+                                    )}
+                                </div>
+                            );
+                        case 'audio':
+                            return (
+                                <div key={idx} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-4xl">🎵</div>
+                                        <div className="flex-1">
+                                            <audio controls className="w-full">
+                                                <source src={element.url} />
+                                                Your browser does not support the audio element.
+                                            </audio>
+                                            {element.content && (
+                                                <p className="text-sm text-gray-500 mt-2">{element.content}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        case 'youtube':
+                            return (
+                                <div key={idx} className="relative pb-[56.25%] h-0 rounded-lg overflow-hidden shadow-lg">
+                                    <ReactPlayer
+                                        url={element.url || element.content}
+                                        className="absolute top-0 left-0"
+                                        width="100%"
+                                        height="100%"
+                                        controls
+                                    />
+                                </div>
+                            );
+                        default:
+                            return null;
+                    }
+                })}
+            </div>
+        );
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                    <p className="mt-4 text-gray-600">Loading content...</p>
+                    <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+                    <p className="mt-6 text-gray-600 text-lg">Loading content...</p>
                 </div>
             </div>
         );
@@ -150,14 +181,14 @@ const ContentViewPage = ({ token, user }) => {
 
     if (error || !content) {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-                <div className="bg-white rounded-lg shadow-xl p-8 max-w-md text-center">
-                    <div className="text-6xl mb-4">😕</div>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
+                    <div className="text-7xl mb-4">😕</div>
                     <h2 className="text-2xl font-bold text-gray-800 mb-2">Content Not Found</h2>
                     <p className="text-gray-600 mb-6">{error || 'The content you are looking for does not exist.'}</p>
                     <button
                         onClick={() => navigate('/student')}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
                     >
                         Back to Dashboard
                     </button>
@@ -166,20 +197,36 @@ const ContentViewPage = ({ token, user }) => {
         );
     }
 
+    const counts = getContentCounts();
+    const hasAnyContent = counts.text > 0 || counts.images > 0 || counts.videos > 0 || counts.audio > 0 || counts.youtube > 0;
+
+    const sections = [
+        { id: 'text', icon: '📝', name: 'Text Content', color: 'bg-blue-500', count: counts.text },
+        { id: 'images', icon: '🖼️', name: 'Images', color: 'bg-green-500', count: counts.images },
+        { id: 'videos', icon: '🎬', name: 'Videos', color: 'bg-purple-500', count: counts.videos },
+        { id: 'audio', icon: '🎵', name: 'Audio', color: 'bg-yellow-500', count: counts.audio },
+        { id: 'youtube', icon: '📺', name: 'YouTube Videos', color: 'bg-red-500', count: counts.youtube }
+    ];
+
+    const availableSections = sections.filter(section => section.count > 0);
+
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
             {/* Header */}
-            <header className="bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">Interactive Classroom</h1>
-                        <p className="text-blue-100 text-sm">{user?.role === 'student' ? 'Student Portal' : 'Teacher Portal'}</p>
+            <header className="bg-white shadow-lg sticky top-0 z-10">
+                <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <div className="text-3xl">📚</div>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-800">Interactive Classroom</h1>
+                            <p className="text-gray-500 text-sm">Content Viewer</p>
+                        </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <span className="text-white">Welcome, {user?.name}!</span>
+                        <span className="text-gray-700">Welcome, {user?.name}!</span>
                         <button
-                            onClick={() => navigate(user?.role === 'student' ? '/student' : '/teacher')}
-                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
+                            onClick={() => navigate('/student')}
+                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center gap-2"
                         >
                             ← Back to Dashboard
                         </button>
@@ -198,56 +245,111 @@ const ContentViewPage = ({ token, user }) => {
 
             {/* Content Body */}
             <div className="max-w-4xl mx-auto px-4 py-8">
-                {/* Content Header */}
-                <div className="bg-white rounded-lg shadow-md mb-6 overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-6 text-white">
-                        <h1 className="text-3xl font-bold mb-2">{content.title}</h1>
-                        <p className="text-blue-100">
-                            Subject: {getSubjectName(content.subject)}
-                        </p>
+                {/* Content Info Card */}
+                <div className="bg-white rounded-2xl shadow-xl mb-8 overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                        <h1 className="text-2xl md:text-3xl font-bold mb-2">{content.title}</h1>
+                        <p className="text-blue-100">Subject: {getSubjectName(content.subject)}</p>
                         {content.teacherId && (
-                            <p className="text-blue-100 text-sm mt-2">
-                                Uploaded by: {content.teacherId.name}
+                            <p className="text-blue-100 text-sm mt-2 flex items-center gap-2">
+                                <span>👨‍🏫</span> Teacher: {content.teacherId.name}
                             </p>
                         )}
+                        <p className="text-blue-100 text-xs mt-2">
+                            📅 Uploaded: {new Date(content.createdAt).toLocaleDateString()}
+                        </p>
                     </div>
                     
                     {content.description && (
-                        <div className="p-6 bg-gray-50 border-b">
-                            <h3 className="font-semibold text-gray-700 mb-2">📖 Description</h3>
+                        <div className="p-5 bg-gray-50 border-b">
                             <p className="text-gray-700">{content.description}</p>
                         </div>
                     )}
-                    
-                    <div className="p-4 bg-gray-50 flex flex-wrap gap-4 text-sm text-gray-600">
-                        <span>📅 {new Date(content.createdAt).toLocaleDateString()}</span>
-                        <span>📝 {content.elements?.filter(el => el.type === 'text').length || 0} text sections</span>
-                        <span>🖼️ {content.elements?.filter(el => el.type === 'image').length || 0} images</span>
-                        <span>🎬 {content.elements?.filter(el => el.type === 'video').length || 0} videos</span>
-                        <span>🎵 {content.elements?.filter(el => el.type === 'audio').length || 0} audio files</span>
-                        <span>📺 {content.elements?.filter(el => el.type === 'youtube').length || 0} YouTube videos</span>
-                    </div>
                 </div>
 
-                {/* Content Elements */}
-                <div className="space-y-6">
-                    <h2 className="text-2xl font-bold text-gray-800 border-b-2 border-blue-500 pb-2 mb-4">
-                        📚 Content
-                    </h2>
-                    {content.elements && content.elements.length > 0 ? (
-                        content.elements
-                            .sort((a, b) => a.order - b.order)
-                            .map(renderElement)
-                    ) : (
-                        <div className="bg-white rounded-lg shadow-md p-12 text-center">
-                            <p className="text-gray-500">No content elements available.</p>
+                {/* Interactive Emoji Buttons */}
+                {hasAnyContent ? (
+                    <>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+                            🎯 Click on any emoji to explore the content
+                        </h2>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                            {availableSections.map(section => (
+                                <button
+                                    key={section.id}
+                                    onClick={() => toggleSection(section.id)}
+                                    className={`${section.color} text-white p-6 rounded-xl transition transform hover:scale-105 hover:shadow-xl ${
+                                        activeSection === section.id ? 'ring-4 ring-offset-2 ring-blue-400 shadow-lg' : ''
+                                    }`}
+                                >
+                                    <div className="text-5xl mb-3">{section.icon}</div>
+                                    <div className="font-semibold text-sm">{section.name}</div>
+                                    <div className="text-xs mt-2 opacity-90">{section.count} item(s)</div>
+                                    {activeSection === section.id && (
+                                        <div className="mt-2 text-xs bg-white bg-opacity-20 rounded-full px-2 py-1 inline-block">
+                                            ▼ Showing
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
                         </div>
-                    )}
+
+                        {/* Display Content Based on Active Section */}
+                        <div className="bg-white rounded-xl shadow-lg p-6 min-h-[300px]">
+                            {activeSection ? (
+                                <>
+                                    <div className="flex justify-between items-center mb-4 pb-3 border-b">
+                                        <h3 className="text-xl font-bold text-gray-800">
+                                            {sections.find(s => s.id === activeSection)?.name}
+                                        </h3>
+                                        <button
+                                            onClick={() => setActiveSection(null)}
+                                            className="text-gray-400 hover:text-gray-600 transition"
+                                        >
+                                            Close ✕
+                                        </button>
+                                    </div>
+                                    {renderContentByType()}
+                                </>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <div className="text-6xl mb-4">👆</div>
+                                    <p className="text-gray-500 text-lg">Click on any emoji button above to view content</p>
+                                    <p className="text-gray-400 text-sm mt-2">Choose what you want to learn!</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+                        <div className="text-6xl mb-4">📭</div>
+                        <p className="text-gray-500 text-lg">No content available in this lesson.</p>
+                        <p className="text-gray-400 text-sm mt-2">Check back later for updates!</p>
+                    </div>
+                )}
+
+                {/* Debug Info */}
+                <div className="mt-8 p-4 bg-gray-100 rounded-lg text-xs">
+                    <details>
+                        <summary className="cursor-pointer font-bold">Debug Info (Click to expand)</summary>
+                        <pre className="mt-2 overflow-auto">
+                            {JSON.stringify({
+                                contentId: contentId,
+                                title: content.title,
+                                elementsCount: content.elements?.length,
+                                elements: content.elements?.map(el => ({ 
+                                    type: el.type, 
+                                    hasUrl: !!el.url,
+                                    url: el.url ? el.url.substring(0, 50) + '...' : null
+                                }))
+                            }, null, 2)}
+                        </pre>
+                    </details>
                 </div>
 
-                {/* Footer */}
+                {/* Footer Tip */}
                 <div className="mt-8 text-center text-gray-500 text-sm">
-                    <p>© 2024 Interactive Classroom - All rights reserved</p>
+                    <p>💡 Tip: Click on different emojis to explore different types of content</p>
                 </div>
             </div>
         </div>

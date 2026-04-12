@@ -13,7 +13,6 @@ function App() {
         return savedUser ? JSON.parse(savedUser) : null;
     });
 
-    // Protected Route wrapper
     const ProtectedRoute = ({ children, allowedRoles }) => {
         if (!token || !user) {
             return <Navigate to="/login" replace />;
@@ -49,6 +48,7 @@ function App() {
                     </ProtectedRoute>
                 } />
                 
+                {/* This is the separate page for viewing content */}
                 <Route path="/content/:contentId" element={
                     <ProtectedRoute allowedRoles={['student', 'teacher']}>
                         <ContentViewPage token={token} user={user} />

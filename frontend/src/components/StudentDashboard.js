@@ -93,6 +93,7 @@ const StudentDashboard = ({ token, user }) => {
         setShowEditor(true);
     };
 
+    // UPDATED: Navigate to separate page instead of showing modal
     const viewContent = (contentId) => {
         navigate(`/content/${contentId}`);
     };
@@ -101,6 +102,18 @@ const StudentDashboard = ({ token, user }) => {
     const getPreviewImage = (content) => {
         const imageElement = content.elements?.find(el => el.type === 'image');
         return imageElement ? imageElement.url : null;
+    };
+
+    // Get content stats for display
+    const getContentStats = (content) => {
+        const stats = {
+            text: content.elements?.filter(el => el.type === 'text').length || 0,
+            images: content.elements?.filter(el => el.type === 'image').length || 0,
+            videos: content.elements?.filter(el => el.type === 'video').length || 0,
+            audio: content.elements?.filter(el => el.type === 'audio').length || 0,
+            youtube: content.elements?.filter(el => el.type === 'youtube').length || 0
+        };
+        return stats;
     };
 
     return (
@@ -199,74 +212,90 @@ const StudentDashboard = ({ token, user }) => {
                                         <p className="text-gray-400 text-sm mt-2">Check back later for new lessons!</p>
                                     </div>
                                 ) : (
-                                    contents.map(content => (
-                                        <div key={content._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 duration-300">
-                                            {/* Preview Image or Icon */}
-                                            <div className="h-40 bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center justify-center relative">
-                                                {getPreviewImage(content) ? (
-                                                    <img 
-                                                        src={getPreviewImage(content)} 
-                                                        alt={content.title}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="text-center text-white">
-                                                        <div className="text-6xl mb-2">📚</div>
-                                                        <p className="text-sm font-medium">{subjectNames[content.subject]}</p>
+                                    contents.map(content => {
+                                        const stats = getContentStats(content);
+                                        return (
+                                            <div key={content._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 duration-300">
+                                                {/* Preview Image or Icon */}
+                                                <div className="h-40 bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center justify-center relative">
+                                                    {getPreviewImage(content) ? (
+                                                        <img 
+                                                            src={getPreviewImage(content)} 
+                                                            alt={content.title}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="text-center text-white">
+                                                            <div className="text-6xl mb-2">📚</div>
+                                                            <p className="text-sm font-medium">{subjectNames[content.subject]}</p>
+                                                        </div>
+                                                    )}
+                                                    {/* Subject badge overlay */}
+                                                    <div className="absolute top-2 right-2">
+                                                        <span className="text-xs bg-white text-blue-600 px-2 py-1 rounded-full shadow-md font-medium">
+                                                            {subjectNames[content.subject]?.split(' ')[0] || content.subject}
+                                                        </span>
                                                     </div>
-                                                )}
-                                                {/* Subject badge overlay */}
-                                                <div className="absolute top-2 right-2">
-                                                    <span className="text-xs bg-white text-blue-600 px-2 py-1 rounded-full shadow-md font-medium">
-                                                        {subjectNames[content.subject]?.split(' ')[0] || content.subject}
-                                                    </span>
+                                                </div>
+                                                
+                                                <div className="p-5">
+                                                    <h3 className="font-bold text-xl text-gray-800 mb-2 line-clamp-1">{content.title}</h3>
+                                                    
+                                                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
+                                                        {content.description || 'No description provided'}
+                                                    </p>
+                                                    
+                                                    {/* Content Stats with Icons */}
+                                                    <div className="flex flex-wrap gap-2 mb-4">
+                                                        {stats.text > 0 && (
+                                                            <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs flex items-center gap-1">
+                                                                📝 {stats.text}
+                                                            </span>
+                                                        )}
+                                                        {stats.images > 0 && (
+                                                            <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-xs flex items-center gap-1">
+                                                                🖼️ {stats.images}
+                                                            </span>
+                                                        )}
+                                                        {stats.videos > 0 && (
+                                                            <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs flex items-center gap-1">
+                                                                🎬 {stats.videos}
+                                                            </span>
+                                                        )}
+                                                        {stats.audio > 0 && (
+                                                            <span className="bg-yellow-100 text-yellow-600 px-2 py-1 rounded text-xs flex items-center gap-1">
+                                                                🎵 {stats.audio}
+                                                            </span>
+                                                        )}
+                                                        {stats.youtube > 0 && (
+                                                            <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs flex items-center gap-1">
+                                                                📺 {stats.youtube}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="text-xs text-gray-400 mb-4">
+                                                        📅 {new Date(content.createdAt).toLocaleDateString()}
+                                                    </div>
+                                                    
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => viewContent(content._id)}
+                                                            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+                                                        >
+                                                            👁️ View Content
+                                                        </button>
+                                                        <button
+                                                            onClick={() => startWorking(content)}
+                                                            className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
+                                                        >
+                                                            ✏️ Work on it
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            
-                                            <div className="p-5">
-                                                <h3 className="font-bold text-xl text-gray-800 mb-2 line-clamp-1">{content.title}</h3>
-                                                
-                                                <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
-                                                    {content.description || 'No description provided'}
-                                                </p>
-                                                
-                                                {/* Content Stats */}
-                                                <div className="flex flex-wrap gap-2 mb-4 text-xs text-gray-500">
-                                                    {content.elements?.filter(el => el.type === 'text').length > 0 && (
-                                                        <span className="bg-gray-100 px-2 py-1 rounded">📝 {content.elements.filter(el => el.type === 'text').length}</span>
-                                                    )}
-                                                    {content.elements?.filter(el => el.type === 'image').length > 0 && (
-                                                        <span className="bg-gray-100 px-2 py-1 rounded">🖼️ {content.elements.filter(el => el.type === 'image').length}</span>
-                                                    )}
-                                                    {content.elements?.filter(el => el.type === 'video').length > 0 && (
-                                                        <span className="bg-gray-100 px-2 py-1 rounded">🎬 {content.elements.filter(el => el.type === 'video').length}</span>
-                                                    )}
-                                                    {content.elements?.filter(el => el.type === 'audio').length > 0 && (
-                                                        <span className="bg-gray-100 px-2 py-1 rounded">🎵 {content.elements.filter(el => el.type === 'audio').length}</span>
-                                                    )}
-                                                </div>
-                                                
-                                                <div className="text-xs text-gray-400 mb-4">
-                                                    📅 {new Date(content.createdAt).toLocaleDateString()}
-                                                </div>
-                                                
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => viewContent(content._id)}
-                                                        className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-                                                    >
-                                                        👁️ View Content
-                                                    </button>
-                                                    <button
-                                                        onClick={() => startWorking(content)}
-                                                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
-                                                    >
-                                                        ✏️ Work on it
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         )}
