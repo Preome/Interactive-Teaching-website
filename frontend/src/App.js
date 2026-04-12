@@ -5,7 +5,7 @@ import Signup from './components/Signup';
 import TeacherDashboard from './components/TeacherDashboard';
 import StudentDashboard from './components/StudentDashboard';
 import ContentViewPage from './components/ContentViewPage';
-import GeminiPractice from './components/GeminiPractice';
+
 
 function App() {
     const [token, setToken] = useState(localStorage.getItem('token'));
@@ -50,17 +50,13 @@ function App() {
                     </ProtectedRoute>
                 } />
                 
-                {/* Use the original ContentViewPage */}
                 <Route path="/content/:contentId" element={
                     <ProtectedRoute allowedRoles={['student', 'teacher']}>
                         <ContentViewPage token={token} user={user} />
                     </ProtectedRoute>
                 } />
-                <Route path="/gemini-practice/:contentId" element={
-                    <ProtectedRoute allowedRoles={['student']}>
-                        <GeminiPractice token={token} user={user} />
-                    </ProtectedRoute>
-                } />
+                
+
                 
                 <Route path="/" element={
                     <Navigate to={token ? (user?.role === 'teacher' ? '/teacher' : '/student') : '/login'} replace />
@@ -71,3 +67,4 @@ function App() {
 }
 
 export default App;
+

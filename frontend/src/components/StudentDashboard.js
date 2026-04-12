@@ -51,19 +51,8 @@ const StudentDashboard = ({ token, user }) => {
     }, [selectedSubject, token]);
 
     const fetchArticles = useCallback(async () => {
-        try {
-            const url = selectedSubject === 'all' 
-                ? 'http://localhost:5000/api/interactive-article/all'
-                : `http://localhost:5000/api/interactive-article/all?subject=${selectedSubject}`;
-            
-            const response = await axios.get(url, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setArticles(response.data);
-        } catch (error) {
-            console.error('Error fetching articles:', error);
-        }
-    }, [selectedSubject, token]);
+        console.log('Articles fetch skipped - using Content model only');
+    }, []);
 
     const fetchMyWorks = useCallback(async () => {
         try {
@@ -408,20 +397,16 @@ const StudentDashboard = ({ token, user }) => {
                                                         👁️ View Lesson
                                                     </button>
                                                     {item.itemType === 'regular' && item.subject === 'programming' && (
-                                                        <div className="flex gap-2">
+                                                        <div className="flex gap-2 w-full">
                                                             <button
-                                                                onClick={() => {
-                                                                    navigate(`/gemini-practice/${item._id}`, {
-                                                                        state: { token, user }
-                                                                    });
-                                                                }}
-                                                                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 px-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm flex items-center gap-2 justify-center"
+                                                                onClick={() => startWorking(item)}
+                                                                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 px-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
                                                             >
-                                                                🤖 AI Practice
+                                                                💻 Coding Practice
                                                             </button>
                                                             <button
                                                                 onClick={() => startWorking(item)}
-                                                                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm flex-1"
+                                                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
                                                             >
                                                                 ✏️ Notes
                                                             </button>
@@ -556,3 +541,4 @@ const StudentDashboard = ({ token, user }) => {
 };
 
 export default StudentDashboard;
+

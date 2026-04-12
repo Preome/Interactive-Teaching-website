@@ -31,6 +31,13 @@ const GeminiPractice = () => {
     }, [contentId, token]);
 
     const handlePractice = async () => {
+        console.log('Generate clicked - prompt:', prompt.trim(), 'token:', token ? 'present' : 'missing');
+        
+        if (!prompt.trim()) {
+            alert('Please enter a prompt first!');
+            return;
+        }
+        
         setLoading(true);
         setError('');
         setResponse('');
@@ -39,15 +46,15 @@ const GeminiPractice = () => {
             const res = await axios.post('http://localhost:5000/api/student/gemini-practice', {
                 contentId,
                 contentTitle,
-                prompt
+                prompt: prompt.trim()
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-
+            console.log('Gemini response:', res.data);
             setResponse(res.data.response);
         } catch (err) {
-            console.error('Gemini error:', err);
-            setError(err.response?.data?.error || 'Practice session failed');
+            console.error('Gemini error:', err.response?.status, err.response?.data);
+            setError(err.response?.data?.error || 'Practice session failed - check backend');
         } finally {
             setLoading(false);
         }
