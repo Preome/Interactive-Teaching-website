@@ -11,17 +11,40 @@ const ContentViewPage = ({ token, user }) => {
     const [error, setError] = useState('');
     const [activeSection, setActiveSection] = useState(null);
     const [activePopup, setActivePopup] = useState(null);
+    const [showDebug, setShowDebug] = useState(false);
 
     const fetchContent = useCallback(async () => {
         try {
             const response = await axios.get(`http://localhost:5000/api/content/${contentId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            
+            console.log('🔍 DEBUG - Content fetched:', contentId);
+            console.log('📊 Raw content data:', JSON.stringify(response.data, null, 2));
+            
+            if (response.data.elements) {
+                const counts = {};
+                response.data.elements.forEach(el => {
+                    const type = el.type || 'unknown';
+                    counts[type] = (counts[type] || 0) + 1;
+                });
+                console.log('📈 Element types:', counts);
+                
+                const interactiveEls = response.data.elements.filter(el => el.type === 'interactive_text');
+                console.log('📰 Interactive elements found:', interactiveEls.length);
+                interactiveEls.forEach((el, i) => {
+                    console.log(`Interactive #${i}:`, {
+                        textPreview: el.content?.substring(0, 50),
+                        interactiveItems: el.interactiveElements?.length || 0
+                    });
+                });
+            }
+            
             setContent(response.data);
             setLoading(false);
         } catch (error) {
-            console.error('Error fetching content:', error);
-            setError('Failed to load content');
+            console.error('❌ Fetch error:', error.response?.data || error.message);
+            setError(`Failed to load content: ${error.response?.data?.error || error.message}`);
             setLoading(false);
         }
     }, [contentId, token]);
@@ -63,13 +86,14 @@ const ContentViewPage = ({ token, user }) => {
         if (!content || !content.elements) {
             return { text: 0, images: 0, videos: 0, audio: 0, youtube: 0, interactive: 0 };
         }
+        const interactiveCount = content.elements.filter(el => el.type === 'interactive_text' && el.interactiveElements && el.interactiveElements.length > 0).length;
         return {
             text: content.elements.filter(el => el.type === 'text').length,
             images: content.elements.filter(el => el.type === 'image' && el.url).length,
             videos: content.elements.filter(el => el.type === 'video' && el.url).length,
             audio: content.elements.filter(el => el.type === 'audio' && el.url).length,
             youtube: content.elements.filter(el => el.type === 'youtube').length,
-            interactive: content.elements.filter(el => el.type === 'interactive_text').length
+            interactive: interactiveCount
         };
     };
 
@@ -241,7 +265,21 @@ const ContentViewPage = ({ token, user }) => {
     };
 
     const renderContentByType = () => {
+        console.log('renderContentByType called:', activeSection, content?.elements?.length);
+        
         if (!activeSection) return null;
+        
+        if (activeSection === 'interactive') {
+            console.log('Rendering interactive articles');
+            const interactiveElements = content?.elements?.filter(el => el.type === 'interactive_text') || [];
+            console.log('Interactive elements for render:', interactiveElements.length);
+            return renderInteractiveArticle(interactiveElements[0], 0) || (
+                <div className="text-center py-8 text-gray-500">
+                    <p>No interactive articles available</p>
+                    <p className="text-sm mt-2">This means the data wasn't saved correctly during upload.</p>
+                </div>
+            );
+        }
         
         const elements = getElementsByType(activeSection);
         
@@ -302,8 +340,6 @@ const ContentViewPage = ({ token, user }) => {
                                     />
                                 </div>
                             );
-                        case 'interactive':
-                            return renderInteractiveArticle(element, idx);
                         default:
                             return null;
                     }
@@ -350,7 +386,7 @@ const ContentViewPage = ({ token, user }) => {
         { id: 'videos', icon: '🎬', name: 'Videos', color: 'bg-purple-500', count: counts.videos },
         { id: 'audio', icon: '🎵', name: 'Audio', color: 'bg-yellow-500', count: counts.audio },
         { id: 'youtube', icon: '📺', name: 'YouTube Videos', color: 'bg-red-500', count: counts.youtube },
-        { id: 'interactive', icon: '📰', name: 'Interactive Articles', color: 'bg-indigo-500', count: counts.interactive }
+        { id: 'interactive', icon: '📰', name: 'Interactive Articles', color: 'bg-indigo-500', count: content?.contentType === 'interactive_article' ? 1 : counts.interactive }
     ];
 
     const availableSections = sections.filter(section => section.count > 0);
