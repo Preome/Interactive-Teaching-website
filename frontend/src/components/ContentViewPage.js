@@ -10,15 +10,13 @@ const ContentViewPage = ({ token, user }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeSection, setActiveSection] = useState(null);
-    const [activeInteractivePopup, setActiveInteractivePopup] = useState(null);
+    const [activePopup, setActivePopup] = useState(null);
 
     const fetchContent = useCallback(async () => {
         try {
-            console.log('Fetching content:', contentId);
             const response = await axios.get(`http://localhost:5000/api/content/${contentId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            console.log('Content received:', response.data);
             setContent(response.data);
             setLoading(false);
         } catch (error) {
@@ -32,14 +30,6 @@ const ContentViewPage = ({ token, user }) => {
         fetchContent();
     }, [fetchContent]);
 
-    const toggleSection = (section) => {
-        if (activeSection === section) {
-            setActiveSection(null);
-        } else {
-            setActiveSection(section);
-        }
-    };
-
     const getSubjectName = (subject) => {
         const subjectNames = {
             'microsoft_word': 'Microsoft Word',
@@ -50,19 +40,6 @@ const ContentViewPage = ({ token, user }) => {
             'english': 'English',
             'math': 'Mathematics',
             'science': 'Science',
-            'physics': 'Physics',
-            'chemistry': 'Chemistry',
-            'biology': 'Biology',
-            'programming': 'Programming',
-            'database': 'Database',
-            'history': 'History',
-            'geography': 'Geography',
-            'economics': 'Economics',
-            'civics': 'Civics',
-            'bangla_article': 'Bangla Article',
-            'english_article': 'English Article',
-            'news_article': 'News Article',
-            'interactive_story': 'Interactive Story',
             'other': 'Other Subjects'
         };
         return subjectNames[subject] || subject;
@@ -96,14 +73,14 @@ const ContentViewPage = ({ token, user }) => {
         };
     };
 
-    // Component for Interactive Article Popup
-    const InteractiveWord = ({ segment, popupState, setPopupState, segIdx }) => {
-        const isOpen = popupState === segIdx;
+    // Component for Interactive Word Popup
+    const InteractiveWord = ({ segment, popupId, onClose }) => {
+        const isOpen = activePopup === popupId;
         
         return (
             <span className="relative inline-block">
                 <button
-                    onClick={() => setPopupState(isOpen ? null : segIdx)}
+                    onClick={() => setActivePopup(isOpen ? null : popupId)}
                     className="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-100 to-yellow-200 hover:from-yellow-200 hover:to-yellow-300 rounded-lg px-2 py-1 mx-0.5 transition cursor-pointer shadow-sm"
                 >
                     <span className="text-lg">{segment.emoji}</span>
@@ -116,91 +93,63 @@ const ContentViewPage = ({ token, user }) => {
                 
                 {isOpen && (
                     <div 
-                        className="absolute z-20 mt-2 w-80 md:w-96 bg-white rounded-xl shadow-2xl border-2 overflow-hidden animate-fadeIn"
+                        className="absolute z-20 mt-2 w-80 md:w-96 bg-white rounded-xl shadow-2xl border-2 overflow-hidden"
                         style={{ left: '50%', transform: 'translateX(-50%)' }}
                     >
-                        {/* Popup Header */}
                         <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-3 flex justify-between items-center">
                             <div className="flex items-center gap-2">
                                 <span className="text-2xl">{segment.emoji}</span>
                                 <span className="font-bold">{segment.word}</span>
                             </div>
                             <button
-                                onClick={() => setPopupState(null)}
+                                onClick={() => setActivePopup(null)}
                                 className="text-white hover:text-gray-200 text-xl"
                             >
                                 ✕
                             </button>
                         </div>
                         
-                        {/* Popup Content based on media type */}
                         <div className="p-4 max-h-96 overflow-y-auto">
                             {segment.mediaType === 'text' && (
-                                <div>
-                                    <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                                        {segment.explanation || 'No explanation provided.'}
-                                    </div>
+                                <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                    {segment.explanation || 'No explanation provided.'}
                                 </div>
                             )}
                             
                             {segment.mediaType === 'image' && segment.mediaUrl && (
-                                <div>
-                                    <img 
-                                        src={segment.mediaUrl} 
-                                        alt={segment.word}
-                                        className="w-full rounded-lg shadow-md"
-                                        onError={(e) => {
-                                            e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
-                                        }}
-                                    />
-                                    {segment.explanation && (
-                                        <p className="text-sm text-gray-600 mt-3">{segment.explanation}</p>
-                                    )}
-                                </div>
+                                <img 
+                                    src={segment.mediaUrl} 
+                                    alt={segment.word}
+                                    className="w-full rounded-lg shadow-md"
+                                    onError={(e) => {
+                                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                                    }}
+                                />
                             )}
                             
                             {segment.mediaType === 'video' && segment.mediaUrl && (
-                                <div>
-                                    <video 
-                                        controls 
-                                        className="w-full rounded-lg shadow-md"
-                                        controlsList="nodownload"
-                                    >
-                                        <source src={segment.mediaUrl} />
-                                        Your browser does not support video.
-                                    </video>
-                                    {segment.explanation && (
-                                        <p className="text-sm text-gray-600 mt-3">{segment.explanation}</p>
-                                    )}
-                                </div>
+                                <video controls className="w-full rounded-lg shadow-md">
+                                    <source src={segment.mediaUrl} />
+                                    Your browser does not support video.
+                                </video>
                             )}
                             
                             {segment.mediaType === 'audio' && segment.mediaUrl && (
-                                <div>
-                                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                                        <div className="text-4xl">🎵</div>
-                                        <audio controls className="flex-1">
-                                            <source src={segment.mediaUrl} />
-                                            Your browser does not support audio.
-                                        </audio>
-                                    </div>
-                                    {segment.explanation && (
-                                        <p className="text-sm text-gray-600 mt-3">{segment.explanation}</p>
-                                    )}
+                                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                                    <div className="text-4xl">🎵</div>
+                                    <audio controls className="flex-1">
+                                        <source src={segment.mediaUrl} />
+                                    </audio>
                                 </div>
                             )}
-
-                            {(segment.mediaType === 'image' || segment.mediaType === 'video' || segment.mediaType === 'audio') && !segment.mediaUrl && (
-                                <div className="text-center py-8 text-gray-500">
-                                    <div className="text-4xl mb-2">📁</div>
-                                    <p>Media file not available</p>
-                                </div>
+                            
+                            {segment.explanation && segment.mediaType !== 'text' && (
+                                <p className="text-sm text-gray-600 mt-3">{segment.explanation}</p>
                             )}
                         </div>
                         
-                        {/* Popup Footer */}
                         <div className="bg-gray-50 p-2 text-center text-xs text-gray-500">
-                            Click ✕ or outside to close
+                            Click ✕ to close
                         </div>
                     </div>
                 )}
@@ -208,50 +157,54 @@ const ContentViewPage = ({ token, user }) => {
         );
     };
 
-    // Component for rendering Interactive Article
-    const InteractiveArticle = ({ element, elementIndex }) => {
-        const [popupState, setPopupState] = useState(null);
-        
-        const text = element.content;
+    // Render Interactive Article
+    const renderInteractiveArticle = (element, idx) => {
+        const text = element.content || '';
         const interactiveItems = element.interactiveElements || [];
         
-        // Split text and highlight interactive words
+        if (interactiveItems.length === 0) {
+            return (
+                <div key={idx} className="mb-6 p-6 bg-white rounded-lg shadow-md">
+                    <p className="text-gray-500">No interactive elements in this article.</p>
+                </div>
+            );
+        }
+        
+        // Split text into segments
         let segments = [];
         let lastIndex = 0;
         
-        // Create a copy of interactive items and sort by position
+        // Sort items by their position in text
         const sortedItems = [...interactiveItems].sort((a, b) => {
             const posA = text.toLowerCase().indexOf(a.word.toLowerCase());
             const posB = text.toLowerCase().indexOf(b.word.toLowerCase());
             return posA - posB;
         });
         
-        sortedItems.forEach((item) => {
+        sortedItems.forEach((item, itemIdx) => {
             const wordIndex = text.toLowerCase().indexOf(item.word.toLowerCase(), lastIndex);
             if (wordIndex !== -1) {
-                // Add text before the word
                 if (wordIndex > lastIndex) {
                     segments.push({
                         type: 'text',
                         content: text.substring(lastIndex, wordIndex)
                     });
                 }
-                // Add the interactive word
                 segments.push({
                     type: 'interactive',
                     content: text.substring(wordIndex, wordIndex + item.word.length),
                     word: item.word,
-                    emoji: item.emoji,
-                    mediaType: item.mediaType,
-                    explanation: item.explanation,
+                    emoji: item.emoji || '📝',
+                    mediaType: item.mediaType || 'text',
+                    explanation: item.explanation || '',
                     mediaUrl: item.mediaUrl,
-                    mediaFile: item.mediaFile
+                    mediaFileName: item.mediaFileName,
+                    id: `${idx}-${itemIdx}`
                 });
                 lastIndex = wordIndex + item.word.length;
             }
         });
         
-        // Add remaining text
         if (lastIndex < text.length) {
             segments.push({
                 type: 'text',
@@ -260,17 +213,23 @@ const ContentViewPage = ({ token, user }) => {
         }
         
         return (
-            <div key={elementIndex} className="mb-6 p-6 bg-white rounded-lg shadow-md">
-                <div className="prose max-w-none">
+            <div key={idx} className="mb-6 p-6 bg-white rounded-lg shadow-md">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                    <span className="text-2xl">📰</span>
+                    <h3 className="font-bold text-lg text-gray-800">Interactive Article</h3>
+                    <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full">
+                        {interactiveItems.length} interactive word(s)
+                    </span>
+                </div>
+                
+                <div className="prose max-w-none leading-relaxed">
                     {segments.map((segment, segIdx) => {
                         if (segment.type === 'interactive') {
                             return (
                                 <InteractiveWord
                                     key={segIdx}
                                     segment={segment}
-                                    popupState={popupState}
-                                    setPopupState={setPopupState}
-                                    segIdx={segIdx}
+                                    popupId={segment.id}
                                 />
                             );
                         }
@@ -312,43 +271,23 @@ const ContentViewPage = ({ token, user }) => {
                                         alt={element.content || 'Image'} 
                                         className="max-w-full h-auto rounded-lg mx-auto shadow-md"
                                         loading="lazy"
-                                        onError={(e) => {
-                                            console.error('Image failed to load:', element.url);
-                                            e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
-                                        }}
                                     />
-                                    {element.content && (
-                                        <p className="text-sm text-gray-500 mt-3 text-center">{element.content}</p>
-                                    )}
                                 </div>
                             );
                         case 'videos':
                             return (
                                 <div key={idx} className="bg-black rounded-lg overflow-hidden shadow-lg">
                                     <video controls className="w-full">
-                                        <source src={element.url} type="video/mp4" />
-                                        Your browser does not support the video tag.
+                                        <source src={element.url} />
                                     </video>
-                                    {element.content && (
-                                        <p className="text-sm text-gray-300 mt-2 p-3">{element.content}</p>
-                                    )}
                                 </div>
                             );
                         case 'audio':
                             return (
-                                <div key={idx} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-4xl">🎵</div>
-                                        <div className="flex-1">
-                                            <audio controls className="w-full">
-                                                <source src={element.url} />
-                                                Your browser does not support the audio element.
-                                            </audio>
-                                            {element.content && (
-                                                <p className="text-sm text-gray-500 mt-2">{element.content}</p>
-                                            )}
-                                        </div>
-                                    </div>
+                                <div key={idx} className="p-4 bg-gray-50 rounded-lg">
+                                    <audio controls className="w-full">
+                                        <source src={element.url} />
+                                    </audio>
                                 </div>
                             );
                         case 'youtube':
@@ -364,7 +303,7 @@ const ContentViewPage = ({ token, user }) => {
                                 </div>
                             );
                         case 'interactive':
-                            return <InteractiveArticle key={idx} element={element} elementIndex={idx} />;
+                            return renderInteractiveArticle(element, idx);
                         default:
                             return null;
                     }
@@ -431,8 +370,8 @@ const ContentViewPage = ({ token, user }) => {
                     <div className="flex items-center gap-4">
                         <span className="text-gray-700">Welcome, {user?.name}!</span>
                         <button
-                            onClick={() => navigate('/student')}
-                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center gap-2"
+                            onClick={() => navigate(user?.role === 'student' ? '/student' : '/teacher')}
+                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
                         >
                             ← Back to Dashboard
                         </button>
@@ -457,9 +396,7 @@ const ContentViewPage = ({ token, user }) => {
                         <h1 className="text-2xl md:text-3xl font-bold mb-2">{content.title}</h1>
                         <p className="text-blue-100">Subject: {getSubjectName(content.subject)}</p>
                         {content.teacherId && (
-                            <p className="text-blue-100 text-sm mt-2 flex items-center gap-2">
-                                <span>👨‍🏫</span> Teacher: {content.teacherId.name}
-                            </p>
+                            <p className="text-blue-100 text-sm mt-2">👨‍🏫 Teacher: {content.teacherId.name}</p>
                         )}
                         <p className="text-blue-100 text-xs mt-2">
                             📅 Uploaded: {new Date(content.createdAt).toLocaleDateString()}
@@ -483,7 +420,7 @@ const ContentViewPage = ({ token, user }) => {
                             {availableSections.map(section => (
                                 <button
                                     key={section.id}
-                                    onClick={() => toggleSection(section.id)}
+                                    onClick={() => setActiveSection(section.id)}
                                     className={`${section.color} text-white p-4 rounded-xl transition transform hover:scale-105 hover:shadow-xl ${
                                         activeSection === section.id ? 'ring-4 ring-offset-2 ring-blue-400 shadow-lg' : ''
                                     }`}
@@ -491,11 +428,6 @@ const ContentViewPage = ({ token, user }) => {
                                     <div className="text-3xl mb-2">{section.icon}</div>
                                     <div className="font-semibold text-xs">{section.name}</div>
                                     <div className="text-xs mt-1 opacity-90">{section.count} item(s)</div>
-                                    {activeSection === section.id && (
-                                        <div className="mt-1 text-xs bg-white bg-opacity-20 rounded-full px-1 py-0.5 inline-block">
-                                            ▼
-                                        </div>
-                                    )}
                                 </button>
                             ))}
                         </div>
@@ -530,29 +462,8 @@ const ContentViewPage = ({ token, user }) => {
                     <div className="bg-white rounded-xl shadow-lg p-12 text-center">
                         <div className="text-6xl mb-4">📭</div>
                         <p className="text-gray-500 text-lg">No content available in this lesson.</p>
-                        <p className="text-gray-400 text-sm mt-2">Check back later for updates!</p>
                     </div>
                 )}
-
-                {/* Debug Info */}
-                <div className="mt-8 p-4 bg-gray-100 rounded-lg text-xs">
-                    <details>
-                        <summary className="cursor-pointer font-bold">Debug Info (Click to expand)</summary>
-                        <pre className="mt-2 overflow-auto">
-                            {JSON.stringify({
-                                contentId: contentId,
-                                title: content.title,
-                                contentType: content.contentType,
-                                elementsCount: content.elements?.length,
-                                elements: content.elements?.map(el => ({ 
-                                    type: el.type, 
-                                    hasUrl: !!el.url,
-                                    interactiveCount: el.interactiveElements?.length || 0
-                                }))
-                            }, null, 2)}
-                        </pre>
-                    </details>
-                </div>
 
                 {/* Footer Tip */}
                 <div className="mt-8 text-center text-gray-500 text-sm">

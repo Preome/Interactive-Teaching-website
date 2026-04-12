@@ -11,60 +11,40 @@ router.post('/upload', authMiddleware, upload.array('media', 20), async (req, re
             return res.status(403).json({ error: 'Only teachers can upload content' });
         }
         
-        console.log('=== UPLOAD DEBUG ===');
         const { subject, title, description, elements, contentType } = JSON.parse(req.body.data);
         
-        console.log('Content Type:', contentType);
-        console.log('Total files uploaded:', req.files?.length || 0);
-        
-        const uploadedElements = [...elements];
-        
-        // Separate files for regular media and interactive media
+        const uploadedElements = JSON.parse(JSON.stringify(elements));
         let fileIndex = 0;
         
         if (req.files && req.files.length > 0) {
-            console.log('Files available:', req.files.map(f => ({ name: f.originalname, path: f.path })));
-            
-            // First pass: Handle regular media elements (images, videos, audio)
+            // Handle regular media
             for (let i = 0; i < uploadedElements.length; i++) {
                 const element = uploadedElements[i];
-                if ((element.type === 'image' || element.type === 'video' || element.type === 'audio') && fileIndex < req.files.length) {
-                    const file = req.files[fileIndex];
-                    element.url = file.path;
-                    element.content = file.originalname;
-                    console.log(`Assigned URL to regular ${element.type}: ${file.path}`);
-                    fileIndex++;
+                if (element.type === 'image' || element.type === 'video' || element.type === 'audio') {
+                    if (fileIndex < req.files.length) {
+                        element.url = req.files[fileIndex].path;
+                        element.content = req.files[fileIndex].originalname;
+                        fileIndex++;
+                    }
                 }
             }
             
-            // Second pass: Handle interactive elements
+            // Handle interactive_text elements
             for (let i = 0; i < uploadedElements.length; i++) {
                 const element = uploadedElements[i];
                 if (element.type === 'interactive_text' && element.interactiveElements) {
                     for (let j = 0; j < element.interactiveElements.length; j++) {
-                        const interactiveItem = element.interactiveElements[j];
-                        // Check if this interactive item needs a media file
-                        if (interactiveItem.mediaType !== 'text' && fileIndex < req.files.length) {
+                        const item = element.interactiveElements[j];
+                        if (item.mediaType !== 'text' && fileIndex < req.files.length) {
                             const file = req.files[fileIndex];
-                            interactiveItem.mediaUrl = file.path;
-                            interactiveItem.mediaFileName = file.originalname;
-                            console.log(`Assigned interactive media URL to "${interactiveItem.word}": ${file.path}`);
+                            item.mediaUrl = file.path;
+                            item.mediaFileName = file.originalname;
                             fileIndex++;
                         }
                     }
                 }
             }
         }
-        
-        console.log('Final elements summary:', uploadedElements.map(e => ({ 
-            type: e.type, 
-            interactiveCount: e.interactiveElements?.length || 0,
-            interactiveItems: e.interactiveElements?.map(ie => ({ 
-                word: ie.word, 
-                mediaType: ie.mediaType,
-                hasUrl: !!ie.mediaUrl 
-            }))
-        })));
         
         const content = new Content({
             subject,
@@ -76,7 +56,6 @@ router.post('/upload', authMiddleware, upload.array('media', 20), async (req, re
         });
         
         await content.save();
-        console.log('Content saved with ID:', content._id);
         res.status(201).json(content);
     } catch (error) {
         console.error('Upload error:', error);
@@ -84,40 +63,72 @@ router.post('/upload', authMiddleware, upload.array('media', 20), async (req, re
     }
 });
 
-// Update content (teacher only)
+// Get all content
+router.get('/all', authMiddleware, async (req, res) => {
+    try {
+        const { subject } = req.query;
+        const filter = {};
+        if (subject && subject !== 'all') filter.subject = subject;
+        
+        const contents = await Content.find(filter).populate('teacherId', 'name').sort('-createdAt');
+        res.json(contents);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get single content
+router.get('/:id', authMiddleware, async (req, res) => {
+    try {
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid content ID format' });
+        }
+        
+        const content = await Content.findById(req.params.id).populate('teacherId', 'name');
+        if (!content) {
+            return res.status(404).json({ error: 'Content not found' });
+        }
+        
+        res.json(content);
+    } catch (error) {
+        console.error('Error fetching content:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update content
 router.put('/update/:id', authMiddleware, upload.array('media', 20), async (req, res) => {
     try {
         if (req.userRole !== 'teacher') {
             return res.status(403).json({ error: 'Only teachers can update content' });
         }
         
-        const { subject, title, description, elements, contentType } = JSON.parse(req.body.data);
-        const uploadedElements = [...elements];
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid content ID format' });
+        }
         
+        const { subject, title, description, elements, contentType } = JSON.parse(req.body.data);
+        const uploadedElements = JSON.parse(JSON.stringify(elements));
         let fileIndex = 0;
         
         if (req.files && req.files.length > 0) {
-            // Handle regular media elements
             for (let i = 0; i < uploadedElements.length; i++) {
                 const element = uploadedElements[i];
-                if ((element.type === 'image' || element.type === 'video' || element.type === 'audio') && fileIndex < req.files.length) {
-                    const file = req.files[fileIndex];
-                    element.url = file.path;
-                    element.content = file.originalname;
-                    fileIndex++;
+                if (element.type === 'image' || element.type === 'video' || element.type === 'audio') {
+                    if (fileIndex < req.files.length) {
+                        element.url = req.files[fileIndex].path;
+                        fileIndex++;
+                    }
                 }
             }
             
-            // Handle interactive elements
             for (let i = 0; i < uploadedElements.length; i++) {
                 const element = uploadedElements[i];
                 if (element.type === 'interactive_text' && element.interactiveElements) {
                     for (let j = 0; j < element.interactiveElements.length; j++) {
-                        const interactiveItem = element.interactiveElements[j];
-                        if (interactiveItem.mediaType !== 'text' && fileIndex < req.files.length) {
-                            const file = req.files[fileIndex];
-                            interactiveItem.mediaUrl = file.path;
-                            interactiveItem.mediaFileName = file.originalname;
+                        const item = element.interactiveElements[j];
+                        if (item.mediaType !== 'text' && fileIndex < req.files.length) {
+                            item.mediaUrl = req.files[fileIndex].path;
                             fileIndex++;
                         }
                     }
@@ -148,38 +159,15 @@ router.put('/update/:id', authMiddleware, upload.array('media', 20), async (req,
     }
 });
 
-// Get all content (filter by subject)
-router.get('/all', authMiddleware, async (req, res) => {
-    try {
-        const { subject } = req.query;
-        const filter = {};
-        if (subject && subject !== 'all') filter.subject = subject;
-        
-        const contents = await Content.find(filter).populate('teacherId', 'name').sort('-createdAt');
-        res.json(contents);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get single content
-router.get('/:id', authMiddleware, async (req, res) => {
-    try {
-        const content = await Content.findById(req.params.id).populate('teacherId', 'name');
-        if (!content) {
-            return res.status(404).json({ error: 'Content not found' });
-        }
-        res.json(content);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Delete content (teacher only)
+// Delete content
 router.delete('/:id', authMiddleware, async (req, res) => {
     try {
         if (req.userRole !== 'teacher') {
             return res.status(403).json({ error: 'Only teachers can delete content' });
+        }
+        
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid content ID format' });
         }
         
         const content = await Content.findByIdAndDelete(req.params.id);
@@ -188,6 +176,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         }
         res.json({ message: 'Content deleted successfully' });
     } catch (error) {
+        console.error('Delete error:', error);
         res.status(500).json({ error: error.message });
     }
 });

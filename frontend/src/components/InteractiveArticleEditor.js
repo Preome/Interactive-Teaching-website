@@ -15,7 +15,8 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
         '📝', '📖', '🔍', '💡', '⭐', '🎯', '📌', '🔔', '💎', '🌟',
         '📰', '🗞️', '📺', '🎬', '🎵', '🖼️', '📷', '🎨', '🔬', '🧪',
         '📊', '📈', '💰', '🏆', '🎉', '✨', '💪', '🤔', '😮', '👍',
-        '👮', '🕵️', '👨‍🏫', '👩‍🎓', '🏥', '🚗', '✈️', '🌍', '🏠', '❤️'
+        '👮', '🕵️', '👨‍🏫', '👩‍🎓', '🏥', '🚗', '✈️', '🌍', '🏠', '❤️',
+        '🇧🇩', '🇺🇸', '🇬🇧', '🇮🇳', '🇵🇰', '🇯🇵', '🇨🇳', '🇰🇷', '🇫🇷', '🇩🇪'
     ];
 
     const handleFileChange = (e) => {
@@ -26,6 +27,7 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
             // Create temporary URL for preview
             const url = URL.createObjectURL(file);
             setMediaUrl(url);
+            console.log('File selected:', file.name, 'Type:', file.type);
         }
     };
 
@@ -50,7 +52,7 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
 
         // For media types, file is required
         if (mediaType !== 'text' && !mediaFile) {
-            alert(`Please upload a ${mediaType} file for this word`);
+            alert(`Please upload a ${mediaType} file for the word "${selectedWord}"`);
             return;
         }
 
@@ -59,12 +61,12 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
             emoji: selectedEmoji,
             mediaType: mediaType,
             explanation: mediaType === 'text' ? explanation : '',
-            mediaUrl: mediaUrl,
-            mediaFile: mediaFile, // Keep the actual file object for upload
-            mediaFileName: mediaFileName,
-            timestamp: Date.now()
+            mediaUrl: mediaUrl || '',
+            mediaFileName: mediaFile ? mediaFile.name : '',
+            position: 0
         };
 
+        console.log('Adding interactive word:', newInteractiveWord);
         setInteractiveWords([...interactiveWords, newInteractiveWord]);
         
         // Reset form for next word
@@ -79,6 +81,9 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
         // Reset file input
         const fileInput = document.getElementById('media-file-input');
         if (fileInput) fileInput.value = '';
+        
+        // Show success feedback
+        alert(`✓ Added interactive word: "${selectedWord}"`);
     };
 
     const removeInteractiveWord = (index) => {
@@ -107,12 +112,15 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
                 mediaType: item.mediaType,
                 explanation: item.explanation,
                 mediaUrl: item.mediaUrl,
-                mediaFile: item.mediaFile,
-                mediaFileName: item.mediaFileName
+                mediaFileName: item.mediaFileName,
+                position: item.position || 0
             })),
             order: 0
         };
 
+        console.log('Sending interactive element to parent:', interactiveElement);
+        console.log('Number of interactive items:', interactiveElement.interactiveElements.length);
+        
         onAddInteractiveText(interactiveElement);
         onClose();
     };
@@ -127,7 +135,7 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
             const mediaIcon = item.mediaType === 'image' ? '🖼️' : 
                              item.mediaType === 'video' ? '🎬' :
                              item.mediaType === 'audio' ? '🎵' : '📝';
-            preview = preview.replace(regex, `${item.emoji} ${mediaIcon} $1 ${item.emoji}`);
+            preview = preview.replace(regex, `${item.emoji} ${mediaIcon} ${item.word} ${item.emoji}`);
         });
         return preview;
     };
@@ -152,8 +160,8 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
                             <li>Write or paste your article text below</li>
                             <li>Select a word from your article and choose what happens when clicked</li>
                             <li>Add text explanation OR upload an image/video/audio file</li>
-                            <li>Repeat for multiple words in your article</li>
-                            <li>Students will click on highlighted words to see your content!</li>
+                            <li>Click "Add Interactive Element" - repeat for multiple words</li>
+                            <li>Click "Add Interactive Article to Content" when done</li>
                         </ol>
                     </div>
 
@@ -168,10 +176,11 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
                             className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             rows="6"
                             placeholder="Enter your news article, story, or educational content here...
+                            
 Example: বাংলাদেশ একটি সুন্দর দেশ। ঢাকা এর রাজধানী। কক্সবাজার বিশ্বের দীর্ঘতম সমুদ্র সৈকত।"
                         />
                         <p className="text-xs text-gray-400 mt-1">
-                            {articleText.split(/\s+/).length} words, {articleText.length} characters
+                            {articleText.split(/\s+/).filter(w => w.length > 0).length} words, {articleText.length} characters
                         </p>
                     </div>
 
@@ -378,6 +387,7 @@ Example: বাংলাদেশ একটি সুন্দর দেশ। �
                                                 <span key={idx} className="inline-flex items-center gap-1 bg-yellow-100 rounded-lg px-2 py-1 mx-0.5 cursor-pointer">
                                                     <span>{word?.emoji}</span>
                                                     <span className="font-medium">{segment}</span>
+                                                    <span>{word?.emoji}</span>
                                                 </span>
                                             );
                                         }
@@ -386,7 +396,7 @@ Example: বাংলাদেশ একটি সুন্দর দেশ। �
                                 </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
-                                💡 Students will click on highlighted words to see {interactiveWords.filter(w => w.mediaType !== 'text').length} images/videos/audio and {interactiveWords.filter(w => w.mediaType === 'text').length} text explanations!
+                                💡 Students will click on highlighted words to see content
                             </p>
                         </div>
                     )}

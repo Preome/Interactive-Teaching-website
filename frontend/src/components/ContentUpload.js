@@ -19,7 +19,6 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
     const [uploading, setUploading] = useState(false);
 
     const subjectOptions = {
-        // Academic Subjects
         'bangla': '📖 Bangla (Bengali)',
         'english': '🇬🇧 English',
         'math': '🧮 Mathematics',
@@ -27,28 +26,20 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
         'physics': '⚡ Physics',
         'chemistry': '🧪 Chemistry',
         'biology': '🧬 Biology',
-        
-        // Computer & IT
         'microsoft_word': '📄 Microsoft Word',
         'excel': '📊 Excel',
         'powerpoint': '📽️ PowerPoint',
         'internet': '🌐 Internet',
         'programming': '💻 Programming',
         'database': '🗄️ Database',
-        
-        // Social Studies
         'history': '🏛️ History',
         'geography': '🗺️ Geography',
         'economics': '💰 Economics',
         'civics': '⚖️ Civics',
-        
-        // Interactive Articles
         'bangla_article': '📰 বাংলা নিবন্ধ (Bangla Article)',
         'english_article': '📰 English Article',
         'news_article': '📰 News Article',
         'interactive_story': '📖 Interactive Story',
-        
-        // Other
         'other': '📚 Other Subjects'
     };
 
@@ -85,13 +76,13 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
         
         const formData = new FormData();
         
-        // Create elements array in the order files will be uploaded
-        const elementsData = [...elements];
+        // Create a deep copy of elements
+        const elementsData = JSON.parse(JSON.stringify(elements));
         
         // Track all files to upload
         const allFiles = [];
         
-        // Add images
+        // Add regular images
         if (selectedImages.length > 0) {
             selectedImages.forEach((file) => {
                 allFiles.push(file);
@@ -103,7 +94,7 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
             });
         }
         
-        // Add videos
+        // Add regular videos
         if (selectedVideos.length > 0) {
             selectedVideos.forEach((file) => {
                 allFiles.push(file);
@@ -115,7 +106,7 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
             });
         }
         
-        // Add audio
+        // Add regular audio
         if (selectedAudios.length > 0) {
             selectedAudios.forEach((file) => {
                 allFiles.push(file);
@@ -127,34 +118,65 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
             });
         }
         
+        // IMPORTANT: Collect interactive media files from interactive articles
+        // We need to go through each interactive article and collect the actual File objects
+        for (let i = 0; i < elementsData.length; i++) {
+            const element = elementsData[i];
+            if (element.type === 'interactive_text' && element.interactiveElements) {
+                for (let j = 0; j < element.interactiveElements.length; j++) {
+                    const item = element.interactiveElements[j];
+                    // Look for the corresponding File object in the original elements state
+                    const originalElement = elements.find(el => el.type === 'interactive_text');
+                    if (originalElement && originalElement.interactiveElements && originalElement.interactiveElements[j]) {
+                        const originalItem = originalElement.interactiveElements[j];
+                        if (originalItem.mediaFile && originalItem.mediaFile instanceof File) {
+                            console.log('Adding interactive media file for word:', item.word, originalItem.mediaFile.name);
+                            allFiles.push(originalItem.mediaFile);
+                            // Clear blob URL - backend will assign real Cloudinary URL
+                            item.mediaUrl = '';
+                            item.mediaFileName = originalItem.mediaFile.name;
+                        }
+                    }
+                }
+            }
+        }
+        
         // Append all files to formData
         allFiles.forEach((file) => {
             formData.append('media', file);
         });
         
+        // Clean up elements data - remove any File objects (they cause JSON.stringify error)
+        const cleanElementsData = JSON.parse(JSON.stringify(elementsData, (key, value) => {
+            // Skip File objects
+            if (value instanceof File) {
+                return undefined;
+            }
+            return value;
+        }));
+        
         formData.append('data', JSON.stringify({ 
             subject, 
             title, 
             description, 
-            elements: elementsData,
+            elements: cleanElementsData,
             contentType: contentType
         }));
 
-        console.log('Uploading:', {
-            isEditing: isEditing,
-            textElements: elements.filter(e => e.type === 'text').length,
-            interactiveElements: elements.filter(e => e.type === 'interactive_text').length,
-            youtubeElements: elements.filter(e => e.type === 'youtube').length,
-            images: selectedImages.length,
-            videos: selectedVideos.length,
-            audios: selectedAudios.length,
-            totalFiles: allFiles.length
-        });
+        console.log('=== UPLOAD SUMMARY ===');
+        console.log('Is Editing:', isEditing);
+        console.log('Text elements:', elements.filter(e => e.type === 'text').length);
+        console.log('Interactive articles:', elements.filter(e => e.type === 'interactive_text').length);
+        console.log('YouTube videos:', elements.filter(e => e.type === 'youtube').length);
+        console.log('Regular images:', selectedImages.length);
+        console.log('Regular videos:', selectedVideos.length);
+        console.log('Regular audio:', selectedAudios.length);
+        console.log('Interactive media files:', allFiles.filter(f => f).length);
+        console.log('Total files to upload:', allFiles.length);
 
         try {
             let response;
             if (isEditing && editingContent?._id) {
-                // Update existing content
                 response = await axios.put(`http://localhost:5000/api/content/update/${editingContent._id}`, formData, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -163,7 +185,6 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
                 });
                 alert('Content updated successfully!');
             } else {
-                // Create new content
                 response = await axios.post('http://localhost:5000/api/content/upload', formData, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -396,7 +417,7 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
                                 <div key={idx} className="mt-2 p-2 bg-indigo-100 rounded flex justify-between items-center">
                                     <div>
                                         <span className="text-sm font-medium">Interactive Article</span>
-                                        <p className="text-xs text-gray-600">{el.content.substring(0, 100)}...</p>
+                                        <p className="text-xs text-gray-600">{el.content?.substring(0, 100)}...</p>
                                         <p className="text-xs text-indigo-600 mt-1">
                                             {el.interactiveElements?.length || 0} interactive elements
                                         </p>
