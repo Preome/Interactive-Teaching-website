@@ -5,6 +5,7 @@ import RichTextEditor from './RichTextEditor';
 import QuizList from './QuizList';
 import QuizTaker from './QuizTaker';
 import CodingTerminal from './CodingTerminal';
+import WorldMapViewer from './WorldMapViewer';
 
 const StudentDashboard = ({ token, user }) => {
     const navigate = useNavigate();
@@ -24,8 +25,10 @@ const StudentDashboard = ({ token, user }) => {
     const [quizResults, setQuizResults] = useState([]);
     const [selectedCodingContent, setSelectedCodingContent] = useState(null);
     const [showCodingTerminal, setShowCodingTerminal] = useState(false);
+    const [showWorldMap, setShowWorldMap] = useState(false);
+    const [selectedMapContent, setSelectedMapContent] = useState(null);
 
-    const subjects = ['all', 'microsoft_word', 'excel', 'powerpoint', 'internet', 'bangla', 'english', 'math', 'science', 'programming', 'coding', 'javascript', 'other'];
+    const subjects = ['all', 'microsoft_word', 'excel', 'powerpoint', 'internet', 'bangla', 'english', 'math', 'science', 'geography', 'programming', 'coding', 'javascript', 'other'];
     const subjectNames = {
         'microsoft_word': 'Microsoft Word',
         'excel': 'Excel',
@@ -35,6 +38,7 @@ const StudentDashboard = ({ token, user }) => {
         'english': 'English',
         'math': 'Mathematics',
         'science': 'Science',
+        'geography': '🌍 Geography',
         'programming': '💻 Programming',
         'coding': '💻 Coding',
         'javascript': '📜 JavaScript',
@@ -141,6 +145,11 @@ const StudentDashboard = ({ token, user }) => {
         }
     };
 
+    const openWorldMap = (content) => {
+        setSelectedMapContent(content);
+        setShowWorldMap(true);
+    };
+
     const getPreviewImage = (content) => {
         const imageElement = content.elements?.find(el => el.type === 'image');
         return imageElement ? imageElement.url : null;
@@ -161,6 +170,11 @@ const StudentDashboard = ({ token, user }) => {
     const isProgrammingSubject = (subject) => {
         const programmingSubjects = ['programming', 'coding', 'javascript', 'python', 'java', 'webdev'];
         return programmingSubjects.includes(subject);
+    };
+
+    // Check if content is geography related
+    const isGeographySubject = (subject) => {
+        return subject === 'geography';
     };
 
     const getAllContent = useMemo(() => {
@@ -451,6 +465,11 @@ const StudentDashboard = ({ token, user }) => {
                                                             🤖 AI Coding Terminal
                                                         </span>
                                                     )}
+                                                    {item.itemType === 'regular' && isGeographySubject(item.subject) && (
+                                                        <span className="bg-gradient-to-r from-green-100 to-teal-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold shadow-sm">
+                                                            🌍 Interactive Map
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 
                                                 <div className="text-xs text-gray-500 mb-5 flex items-center justify-between">
@@ -477,6 +496,21 @@ const StudentDashboard = ({ token, user }) => {
                                                                 className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 px-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
                                                             >
                                                                 💻 Coding Terminal
+                                                            </button>
+                                                            <button
+                                                                onClick={() => startWorking(item)}
+                                                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+                                                            >
+                                                                ✏️ Notes
+                                                            </button>
+                                                        </>
+                                                    ) : item.itemType === 'regular' && isGeographySubject(item.subject) ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => openWorldMap(item)}
+                                                                className="flex-1 bg-gradient-to-r from-green-600 to-teal-600 text-white py-2.5 px-4 rounded-xl hover:from-green-700 hover:to-teal-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+                                                            >
+                                                                🌍 Explore Map
                                                             </button>
                                                             <button
                                                                 onClick={() => startWorking(item)}
@@ -700,6 +734,17 @@ const StudentDashboard = ({ token, user }) => {
                         setSelectedCodingContent(null);
                     }}
                     token={token}
+                />
+            )}
+
+            {/* World Map Modal */}
+            {showWorldMap && selectedMapContent && (
+                <WorldMapViewer
+                    content={selectedMapContent}
+                    onClose={() => {
+                        setShowWorldMap(false);
+                        setSelectedMapContent(null);
+                    }}
                 />
             )}
         </div>
