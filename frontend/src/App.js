@@ -6,7 +6,6 @@ import TeacherDashboard from './components/TeacherDashboard';
 import StudentDashboard from './components/StudentDashboard';
 import ContentViewPage from './components/ContentViewPage';
 
-
 function App() {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [user, setUser] = useState(() => {
@@ -28,16 +27,13 @@ function App() {
     return (
         <Router>
             <Routes>
-                <Route path="/login" element={
-                    !token ? <Login setToken={setToken} setUser={setUser} /> : 
-                    <Navigate to={user?.role === 'teacher' ? '/teacher' : '/student'} replace />
-                } />
+                {/* Login Route - Always show login page */}
+                <Route path="/login" element={<Login setToken={setToken} setUser={setUser} />} />
                 
-                <Route path="/signup" element={
-                    !token ? <Signup setToken={setToken} setUser={setUser} /> : 
-                    <Navigate to={user?.role === 'teacher' ? '/teacher' : '/student'} replace />
-                } />
+                {/* Signup Route - Always show signup page */}
+                <Route path="/signup" element={<Signup setToken={setToken} setUser={setUser} />} />
                 
+                {/* Protected Routes */}
                 <Route path="/teacher" element={
                     <ProtectedRoute allowedRoles={['teacher']}>
                         <TeacherDashboard token={token} user={user} />
@@ -55,13 +51,15 @@ function App() {
                         <ContentViewPage token={token} user={user} />
                     </ProtectedRoute>
                 } />
-                <Route path="/" element={
-                    <Navigate to={token ? (user?.role === 'teacher' ? '/teacher' : '/student') : '/login'} replace />
-                } />
+                
+                {/* Default route - Always go to login first */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                
+                {/* Catch all - redirect to login */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </Router>
     );
 }
 
 export default App;
-
