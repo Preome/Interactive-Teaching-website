@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import RichTextEditor from './RichTextEditor';
+import QuizList from './QuizList';
+import QuizTaker from './QuizTaker';
 
 const StudentDashboard = ({ token, user }) => {
     const navigate = useNavigate();
@@ -16,6 +18,9 @@ const StudentDashboard = ({ token, user }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedQuiz, setSelectedQuiz] = useState(null);
+    const [showQuizTaker, setShowQuizTaker] = useState(false);
+    const [quizResults, setQuizResults] = useState([]);
 
     const subjects = ['all', 'microsoft_word', 'excel', 'powerpoint', 'internet', 'bangla', 'english', 'math', 'science', 'other'];
     const subjectNames = {
@@ -65,11 +70,23 @@ const StudentDashboard = ({ token, user }) => {
         }
     }, [token]);
 
+    const fetchQuizResults = useCallback(async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/api/quiz/results/my-results', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setQuizResults(response.data);
+        } catch (error) {
+            console.error('Error fetching quiz results:', error);
+        }
+    }, [token]);
+
     useEffect(() => {
         fetchContents();
         fetchArticles();
         fetchMyWorks();
-    }, [fetchContents, fetchArticles, fetchMyWorks]);
+        fetchQuizResults();
+    }, [fetchContents, fetchArticles, fetchMyWorks, fetchQuizResults]);
 
     const saveWork = async (contentId, annotatedContent) => {
         try {
@@ -100,6 +117,22 @@ const StudentDashboard = ({ token, user }) => {
 
     const viewArticle = (articleId) => {
         navigate(`/article/${articleId}`);
+    };
+
+    const handleTakeQuiz = (quiz) => {
+        setSelectedQuiz(quiz);
+        setShowQuizTaker(true);
+    };
+
+    const handleQuizComplete = (result) => {
+        setShowQuizTaker(false);
+        setSelectedQuiz(null);
+        fetchQuizResults();
+        if (result.passed) {
+            alert(`🎉 Congratulations! You passed with ${result.percentage}%!`);
+        } else {
+            alert(`📚 You scored ${result.percentage}%. Keep practicing!`);
+        }
     };
 
     const getPreviewImage = (content) => {
@@ -167,10 +200,10 @@ const StudentDashboard = ({ token, user }) => {
             </header>
 
             <div className="max-w-7xl mx-auto px-4 py-8">
-                <div className="flex gap-4 mb-8 border-b bg-white rounded-t-lg px-4">
+                <div className="flex gap-4 mb-8 border-b bg-white rounded-t-lg px-4 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab('browse')}
-                        className={`py-3 px-6 font-medium transition ${
+                        className={`py-3 px-6 font-medium transition whitespace-nowrap ${
                             activeTab === 'browse' 
                                 ? 'border-b-2 border-blue-500 text-blue-600' 
                                 : 'text-gray-600 hover:text-blue-600'
@@ -180,7 +213,7 @@ const StudentDashboard = ({ token, user }) => {
                     </button>
                     <button
                         onClick={() => setActiveTab('mywork')}
-                        className={`py-3 px-6 font-medium transition ${
+                        className={`py-3 px-6 font-medium transition whitespace-nowrap ${
                             activeTab === 'mywork' 
                                 ? 'border-b-2 border-blue-500 text-blue-600' 
                                 : 'text-gray-600 hover:text-blue-600'
@@ -188,8 +221,29 @@ const StudentDashboard = ({ token, user }) => {
                     >
                         ✏️ My Work ({myWorks.length})
                     </button>
+                    <button
+                        onClick={() => setActiveTab('quizzes')}
+                        className={`py-3 px-6 font-medium transition whitespace-nowrap ${
+                            activeTab === 'quizzes' 
+                                ? 'border-b-2 border-green-500 text-green-600' 
+                                : 'text-gray-600 hover:text-green-600'
+                        }`}
+                    >
+                        🎯 Quizzes & Tests
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('results')}
+                        className={`py-3 px-6 font-medium transition whitespace-nowrap ${
+                            activeTab === 'results' 
+                                ? 'border-b-2 border-purple-500 text-purple-600' 
+                                : 'text-gray-600 hover:text-purple-600'
+                        }`}
+                    >
+                        📊 My Results ({quizResults.length})
+                    </button>
                 </div>
 
+                {/* Browse Content Tab */}
                 {activeTab === 'browse' && (
                     <>
                         <div className="bg-white rounded-xl shadow-lg mb-6 p-4 border border-gray-200">
@@ -396,117 +450,12 @@ const StudentDashboard = ({ token, user }) => {
                                                     >
                                                         👁️ View Lesson
                                                     </button>
-{item.itemType === 'regular' && item.subject === 'programming' && (
-<div className="flex gap-2 w-full">
-    <button
-        onClick={() => {
-            // Create full coding terminal
-            const terminal = document.createElement('div');
-            terminal.id = 'coding-terminal';
-            terminal.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-                background: #000; color: #00ff00; font-family: 'Courier New', monospace; 
-                font-size: 14px; z-index: 99999; padding: 20px; box-sizing: border-box;
-                overflow: hidden;
-            `;
-            terminal.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,255,0,0.1); border-bottom: 1px solid #00ff00;">
-                    <h2 style="margin: 0; font-size: 18px; font-weight: bold;">💻 Coding Terminal - ${item.title.replace(/&/g, '&amp;')}</h2>
-                    <button onclick="document.getElementById('coding-terminal').remove()" style="background: none; border: none; color: #ff4444; font-size: 24px; cursor: pointer; padding: 0;">×</button>
-                </div>
-                <div id="terminal-output" style="height: 70vh; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #00ff00; margin-bottom: 10px; white-space: pre-wrap; line-height: 1.4;">
-> Welcome to Interactive Coding Terminal! ⌨️
-> Practice JavaScript, HTML, CSS, and more...
-
-> 💡 SAMPLE EXERCISES:
-> 1. console.log('Hello World');
-> 2. let arr = [1,2,3,4,5].filter(x => x % 2 === 0); console.log(arr);
-> 3. function factorial(n) { return n <= 1 ? 1 : n * factorial(n-1); } console.log(factorial(5));
-> 4. const todo = { task: 'Learn React', done: false }; console.log(todo);
-> 5. for(let i = 0; i < 10; i++) { if(i % 2 === 0) console.log('Even:', i); }
-
-> 📝 Type your code below and press Enter to run!
-> Commands: /clear, /help, /examples
-                </div>
-                <div style="display: flex; align-items: center; padding: 10px; background: #000; border: 1px solid #00ff00; border-top: none;">
-                    <span style="color: #ffff00; margin-right: 5px; white-space: nowrap;">user@practice:~$ </span>
-                    <input id="terminal-input" style="flex: 1; background: none; border: none; color: #00ff00; font-family: inherit; font-size: inherit; outline: none; padding: 0;" placeholder="Enter code or command..." autocomplete="off">
-                </div>
-                <script>
-                    const input = document.getElementById('terminal-input');
-                    const output = document.getElementById('terminal-output');
-                    input.focus();
-                    input.addEventListener('keypress', function(e) {
-                        if (e.key === 'Enter') {
-                            const command = input.value.trim();
-                            if (command) {
-                                const newLine = document.createElement('div');
-                                newLine.textContent = '> ' + command;
-                                newLine.style.color = '#00ff00';
-                                output.appendChild(newLine);
-                                if (command === '/clear') {
-                                    output.innerHTML = '> Terminal cleared! Type /help for commands.\\n> Ready for coding practice!';
-                                } else if (command === '/help') {
-                                    const help = document.createElement('div');
-                                    help.innerHTML = '> Available commands:\\n> /clear - Clear terminal\\n> /help - Show this help\\n> /examples - Show sample code\\n> Type JavaScript code directly!';
-                                    help.style.color = '#ffff00';
-                                    output.appendChild(help);
-                                } else if (command === '/examples') {
-                                    const examples = document.createElement('div');
-                                    examples.innerHTML = '> 💡 EXAMPLES:\\n> console.log("Hello World")\\n> let sum = 0; for(let i=1; i<=10; i++) sum += i; console.log(sum);\\n> const obj = {name: "Practice", level: "Beginner"}; console.log(obj);';
-                                    examples.style.color = '#00ff88';
-                                    output.appendChild(examples);
-                                } else {
-                                    // Simulate code execution
-                                    let result = '';
-                                    try {
-                                        // Simple eval for basic JS (safe in browser sandbox)
-                                        const func = new Function('return ' + command + ';');
-                                        const outputResult = func();
-                                        result = '> Output: ' + JSON.stringify(outputResult, null, 2);
-                                    } catch (e) {
-                                        result = '> Error: ' + e.message;
-                                    }
-                                    const resultLine = document.createElement('div');
-                                    resultLine.innerHTML = result.replace(/\\n/g, '<br>');
-                                    resultLine.style.color = '#ffff00';
-                                    output.appendChild(resultLine);
-                                }
-                                output.scrollTop = output.scrollHeight;
-                                input.value = '';
-                            }
-                        }
-                    });
-                    document.addEventListener('keydown', function(e) {
-                        if (e.key === 'Escape') {
-                            document.getElementById('coding-terminal').remove();
-                        }
-                    });
-                <\/script>
-            `;
-            document.body.appendChild(terminal);
-            terminal.querySelector('#terminal-input').focus();
-        }}
-        className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 px-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
-    >
-        💻 Coding Terminal
-    </button>
-    <button
-        onClick={() => startWorking(item)}
-        className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
-    >
-        ✏️ Notes
-    </button>
-</div>
-)}
-                                                    {item.itemType === 'regular' && item.subject !== 'programming' && (
-                                                        <button
-                                                            onClick={() => startWorking(item)}
-                                                            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
-                                                        >
-                                                            ✏️ Practice
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        onClick={() => startWorking(item)}
+                                                        className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+                                                    >
+                                                        ✏️ Practice
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -517,6 +466,7 @@ const StudentDashboard = ({ token, user }) => {
                     </>
                 )}
 
+                {/* My Work Tab */}
                 {activeTab === 'mywork' && (
                     <div className="bg-white rounded-2xl shadow-xl p-8">
                         <h2 className="text-3xl font-bold mb-8 flex items-center gap-3">
@@ -528,9 +478,6 @@ const StudentDashboard = ({ token, user }) => {
                                 <div className="text-7xl mb-6 opacity-20">📝</div>
                                 <h3 className="text-2xl font-bold text-gray-600 mb-3">No practice work yet</h3>
                                 <p className="text-gray-500 mb-8 max-w-md mx-auto">Browse lessons above and click "Practice" to start annotating and building your knowledge base!</p>
-                                <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-6 py-3 rounded-full font-semibold text-lg">
-                                    📚 Browse Lessons
-                                </div>
                             </div>
                         ) : (
                             <div className="space-y-6">
@@ -575,8 +522,78 @@ const StudentDashboard = ({ token, user }) => {
                         )}
                     </div>
                 )}
+
+                {/* Quizzes Tab */}
+                {activeTab === 'quizzes' && (
+                    <QuizList 
+                        token={token} 
+                        user={user} 
+                        onTakeQuiz={handleTakeQuiz} 
+                        isTeacher={false}
+                    />
+                )}
+
+                {/* My Results Tab */}
+                {activeTab === 'results' && (
+                    <div className="bg-white rounded-2xl shadow-xl p-8">
+                        <h2 className="text-3xl font-bold mb-8 flex items-center gap-3">
+                            <span>📊</span>
+                            My Quiz Results
+                        </h2>
+                        {quizResults.length === 0 ? (
+                            <div className="text-center py-20">
+                                <div className="text-7xl mb-6 opacity-20">📋</div>
+                                <h3 className="text-2xl font-bold text-gray-600 mb-3">No quiz attempts yet</h3>
+                                <p className="text-gray-500 mb-8 max-w-md mx-auto">Go to the Quizzes tab and take your first quiz to test your knowledge!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {quizResults.map(result => (
+                                    <div key={result._id} className={`border rounded-xl p-6 transition-all hover:shadow-lg ${
+                                        result.passed ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'
+                                    }`}>
+                                        <div className="flex justify-between items-start flex-wrap gap-4">
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-xl text-gray-800 mb-2">
+                                                    {result.quizId?.title || 'Quiz'}
+                                                </h3>
+                                                <p className="text-sm text-gray-600 mb-2">
+                                                    Subject: {subjectNames[result.quizId?.subject] || result.quizId?.subject}
+                                                </p>
+                                                <p className="text-xs text-gray-500">
+                                                    Completed: {new Date(result.completedAt).toLocaleString()}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Attempt #{result.attemptNumber}
+                                                </p>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className={`text-3xl font-bold ${result.passed ? 'text-green-600' : 'text-yellow-600'}`}>
+                                                    {Math.round(result.percentage)}%
+                                                </div>
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    Score: {result.score} / {result.totalPoints}
+                                                </p>
+                                                {result.passed ? (
+                                                    <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                                        ✅ Passed
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-block mt-2 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
+                                                        📚 Needs Practice
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
+            {/* Rich Text Editor Modal */}
             {showEditor && selectedContent && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
@@ -623,9 +640,21 @@ const StudentDashboard = ({ token, user }) => {
                     </div>
                 </div>
             )}
+
+            {/* Quiz Taker Modal */}
+            {showQuizTaker && selectedQuiz && (
+                <QuizTaker
+                    token={token}
+                    quiz={selectedQuiz}
+                    onClose={() => {
+                        setShowQuizTaker(false);
+                        setSelectedQuiz(null);
+                    }}
+                    onComplete={handleQuizComplete}
+                />
+            )}
         </div>
     );
 };
 
 export default StudentDashboard;
-

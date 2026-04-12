@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ContentUpload from './ContentUpload';
+import QuizCreator from './QuizCreator';
+import QuizList from './QuizList';
 
 const TeacherDashboard = ({ token, user }) => {
     const navigate = useNavigate();
@@ -11,6 +13,7 @@ const TeacherDashboard = ({ token, user }) => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [refreshQuizzes, setRefreshQuizzes] = useState(false);
 
     const subjectNames = {
         'microsoft_word': 'Microsoft Word',
@@ -93,8 +96,12 @@ const TeacherDashboard = ({ token, user }) => {
     };
 
     const handleViewContent = (contentId) => {
-        // Navigate to full page content view
         navigate(`/content/${contentId}`);
+    };
+
+    const handleQuizCreated = () => {
+        setRefreshQuizzes(!refreshQuizzes);
+        alert('Quiz created successfully!');
     };
 
     const getContentTypeIcon = (content) => {
@@ -125,7 +132,7 @@ const TeacherDashboard = ({ token, user }) => {
                 <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-800">👨‍🏫 Teacher Dashboard</h1>
-                        <p className="text-sm text-gray-500">Manage your interactive classroom content</p>
+                        <p className="text-sm text-gray-500">Manage your interactive classroom content and quizzes</p>
                     </div>
                     <div className="flex items-center gap-4">
                         <span className="text-gray-600">Welcome, {user?.name}!</span>
@@ -144,14 +151,14 @@ const TeacherDashboard = ({ token, user }) => {
 
             <div className="max-w-7xl mx-auto px-4 py-8">
                 {/* Tab Buttons */}
-                <div className="flex gap-4 mb-8 border-b bg-white rounded-t-lg px-4">
+                <div className="flex gap-4 mb-8 border-b bg-white rounded-t-lg px-4 overflow-x-auto">
                     <button
                         onClick={() => {
                             setActiveTab('upload');
                             setShowEditModal(false);
                             setEditingContent(null);
                         }}
-                        className={`py-3 px-6 font-medium transition ${
+                        className={`py-3 px-6 font-medium transition whitespace-nowrap ${
                             activeTab === 'upload' && !showEditModal
                                 ? 'border-b-2 border-blue-500 text-blue-600' 
                                 : 'text-gray-600 hover:text-blue-600'
@@ -164,13 +171,39 @@ const TeacherDashboard = ({ token, user }) => {
                             setActiveTab('manage');
                             setShowEditModal(false);
                         }}
-                        className={`py-3 px-6 font-medium transition ${
+                        className={`py-3 px-6 font-medium transition whitespace-nowrap ${
                             activeTab === 'manage' && !showEditModal
                                 ? 'border-b-2 border-blue-500 text-blue-600' 
                                 : 'text-gray-600 hover:text-blue-600'
                         }`}
                     >
                         📚 Manage Content ({contents.length})
+                    </button>
+                    <button
+                        onClick={() => {
+                            setActiveTab('createQuiz');
+                            setShowEditModal(false);
+                        }}
+                        className={`py-3 px-6 font-medium transition whitespace-nowrap ${
+                            activeTab === 'createQuiz'
+                                ? 'border-b-2 border-green-500 text-green-600' 
+                                : 'text-gray-600 hover:text-green-600'
+                        }`}
+                    >
+                        📝 Create Quiz
+                    </button>
+                    <button
+                        onClick={() => {
+                            setActiveTab('manageQuizzes');
+                            setShowEditModal(false);
+                        }}
+                        className={`py-3 px-6 font-medium transition whitespace-nowrap ${
+                            activeTab === 'manageQuizzes'
+                                ? 'border-b-2 border-purple-500 text-purple-600' 
+                                : 'text-gray-600 hover:text-purple-600'
+                        }`}
+                    >
+                        🎯 Manage Quizzes
                     </button>
                 </div>
 
@@ -304,6 +337,16 @@ const TeacherDashboard = ({ token, user }) => {
                             </div>
                         )}
                     </div>
+                )}
+
+                {/* Create Quiz Tab */}
+                {activeTab === 'createQuiz' && (
+                    <QuizCreator token={token} onQuizCreated={handleQuizCreated} />
+                )}
+
+                {/* Manage Quizzes Tab */}
+                {activeTab === 'manageQuizzes' && (
+                    <QuizList token={token} user={user} onTakeQuiz={() => {}} isTeacher={true} />
                 )}
             </div>
         </div>

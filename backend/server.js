@@ -29,6 +29,8 @@ if (process.env.MONGODB_URI) {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/content', require('./routes/content'));
 app.use('/api/student', require('./routes/student'));
+// Add after other routes
+app.use('/api/quiz', require('./routes/quiz'));
 
 // Test route
 app.get('/', (req, res) => {
