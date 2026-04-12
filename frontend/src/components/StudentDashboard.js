@@ -6,24 +6,30 @@ import RichTextEditor from './RichTextEditor';
 const StudentDashboard = ({ token, user }) => {
     const navigate = useNavigate();
     const [contents, setContents] = useState([]);
+    const [articles, setArticles] = useState([]);
     const [selectedContent, setSelectedContent] = useState(null);
     const [showEditor, setShowEditor] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState('all');
+    const [selectedType, setSelectedType] = useState('all'); // 'all', 'regular', 'article'
     const [myWorks, setMyWorks] = useState([]);
     const [activeTab, setActiveTab] = useState('browse');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const subjects = ['all', 'microsoft_word', 'excel', 'powerpoint', 'internet', 'other'];
+    const subjects = ['all', 'microsoft_word', 'excel', 'powerpoint', 'internet', 'bangla', 'english', 'math', 'science', 'other'];
     const subjectNames = {
         'microsoft_word': 'Microsoft Word',
         'excel': 'Excel',
         'powerpoint': 'PowerPoint',
         'internet': 'Internet',
+        'bangla': 'বাংলা (Bengali)',
+        'english': 'English',
+        'math': 'Mathematics',
+        'science': 'Science',
         'other': 'Other Subjects'
     };
 
-    // Fetch contents with useCallback to avoid recreation
+    // Fetch contents
     const fetchContents = useCallback(async () => {
         setLoading(true);
         setError('');
@@ -32,33 +38,39 @@ const StudentDashboard = ({ token, user }) => {
                 ? 'http://localhost:5000/api/content/all'
                 : `http://localhost:5000/api/content/all?subject=${selectedSubject}`;
             
-            console.log('Fetching from URL:', url);
-            
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            
-            console.log('Fetched contents:', response.data);
             setContents(response.data);
-            
-            if (response.data.length === 0) {
-                setError('No content available for this subject.');
-            }
         } catch (error) {
             console.error('Error fetching contents:', error);
-            setError('Failed to load content. Please try again.');
+            setError('Failed to load content.');
         } finally {
             setLoading(false);
         }
     }, [selectedSubject, token]);
 
-    // Fetch my works with useCallback
+    // Fetch interactive articles
+    const fetchArticles = useCallback(async () => {
+        try {
+            const url = selectedSubject === 'all' 
+                ? 'http://localhost:5000/api/interactive-article/all'
+                : `http://localhost:5000/api/interactive-article/all?subject=${selectedSubject}`;
+            
+            const response = await axios.get(url, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setArticles(response.data);
+        } catch (error) {
+            console.error('Error fetching articles:', error);
+        }
+    }, [selectedSubject, token]);
+
     const fetchMyWorks = useCallback(async () => {
         try {
             const response = await axios.get('http://localhost:5000/api/student/my-work', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            console.log('My works:', response.data);
             setMyWorks(response.data);
         } catch (error) {
             console.error('Error fetching works:', error);
@@ -67,8 +79,9 @@ const StudentDashboard = ({ token, user }) => {
 
     useEffect(() => {
         fetchContents();
+        fetchArticles();
         fetchMyWorks();
-    }, [fetchContents, fetchMyWorks]);
+    }, [fetchContents, fetchArticles, fetchMyWorks]);
 
     const saveWork = async (contentId, annotatedContent) => {
         try {
@@ -93,18 +106,19 @@ const StudentDashboard = ({ token, user }) => {
         setShowEditor(true);
     };
 
-    // UPDATED: Navigate to separate page instead of showing modal
     const viewContent = (contentId) => {
         navigate(`/content/${contentId}`);
     };
 
-    // Get preview image from content
+    const viewArticle = (articleId) => {
+        navigate(`/article/${articleId}`);
+    };
+
     const getPreviewImage = (content) => {
         const imageElement = content.elements?.find(el => el.type === 'image');
         return imageElement ? imageElement.url : null;
     };
 
-    // Get content stats for display
     const getContentStats = (content) => {
         const stats = {
             text: content.elements?.filter(el => el.type === 'text').length || 0,
@@ -115,6 +129,22 @@ const StudentDashboard = ({ token, user }) => {
         };
         return stats;
     };
+
+    // Combine and filter content based on type
+    const getAllContent = () => {
+        let allItems = [];
+        
+        if (selectedType === 'all' || selectedType === 'regular') {
+            allItems.push(...contents.map(c => ({ ...c, itemType: 'regular' })));
+        }
+        if (selectedType === 'all' || selectedType === 'article') {
+            allItems.push(...articles.map(a => ({ ...a, itemType: 'article' })));
+        }
+        
+        return allItems;
+    };
+
+    const filteredContent = getAllContent();
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -151,7 +181,7 @@ const StudentDashboard = ({ token, user }) => {
                                 : 'text-gray-600 hover:text-blue-600'
                         }`}
                     >
-                        📚 Browse Content ({contents.length})
+                        📚 Browse ({filteredContent.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('mywork')}
@@ -168,23 +198,65 @@ const StudentDashboard = ({ token, user }) => {
                 {/* Browse Content Tab */}
                 {activeTab === 'browse' && (
                     <>
-                        {/* Subject Filter */}
+                        {/* Filters */}
                         <div className="bg-white rounded-lg shadow mb-6 p-4">
-                            <label className="block text-gray-700 font-medium mb-2">Filter by Subject:</label>
-                            <div className="flex flex-wrap gap-2">
-                                {subjects.map(subject => (
-                                    <button
-                                        key={subject}
-                                        onClick={() => setSelectedSubject(subject)}
-                                        className={`px-4 py-2 rounded-lg transition ${
-                                            selectedSubject === subject
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                        }`}
-                                    >
-                                        {subject === 'all' ? 'All Subjects' : subjectNames[subject]}
-                                    </button>
-                                ))}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Subject Filter */}
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">Filter by Subject:</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {subjects.map(subject => (
+                                            <button
+                                                key={subject}
+                                                onClick={() => setSelectedSubject(subject)}
+                                                className={`px-3 py-1 rounded-lg text-sm transition ${
+                                                    selectedSubject === subject
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                }`}
+                                            >
+                                                {subject === 'all' ? 'All' : subjectNames[subject].split(' ')[0]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                {/* Content Type Filter */}
+                                <div>
+                                    <label className="block text-gray-700 font-medium mb-2">Content Type:</label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setSelectedType('all')}
+                                            className={`px-4 py-1 rounded-lg transition ${
+                                                selectedType === 'all'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                            }`}
+                                        >
+                                            All
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedType('regular')}
+                                            className={`px-4 py-1 rounded-lg transition ${
+                                                selectedType === 'regular'
+                                                    ? 'bg-green-600 text-white'
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                            }`}
+                                        >
+                                            📹 Regular
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedType('article')}
+                                            className={`px-4 py-1 rounded-lg transition ${
+                                                selectedType === 'article'
+                                                    ? 'bg-purple-600 text-white'
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                            }`}
+                                        >
+                                            📖 Interactive
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -206,96 +278,97 @@ const StudentDashboard = ({ token, user }) => {
                         {/* Content Grid */}
                         {!loading && !error && (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {contents.length === 0 ? (
+                                {filteredContent.length === 0 ? (
                                     <div className="col-span-full text-center py-12 bg-white rounded-lg">
-                                        <p className="text-gray-500 text-lg">No content available for this subject yet.</p>
+                                        <p className="text-gray-500 text-lg">No content available</p>
                                         <p className="text-gray-400 text-sm mt-2">Check back later for new lessons!</p>
                                     </div>
                                 ) : (
-                                    contents.map(content => {
-                                        const stats = getContentStats(content);
-                                        return (
-                                            <div key={content._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 duration-300">
-                                                {/* Preview Image or Icon */}
-                                                <div className="h-40 bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center justify-center relative">
-                                                    {getPreviewImage(content) ? (
-                                                        <img 
-                                                            src={getPreviewImage(content)} 
-                                                            alt={content.title}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="text-center text-white">
-                                                            <div className="text-6xl mb-2">📚</div>
-                                                            <p className="text-sm font-medium">{subjectNames[content.subject]}</p>
+                                    filteredContent.map(item => (
+                                        <div key={item._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition transform hover:-translate-y-1 duration-300">
+                                            {/* Type Badge */}
+                                            <div className={`px-3 py-1 text-white text-xs font-medium ${
+                                                item.itemType === 'article' ? 'bg-purple-600' : 'bg-blue-600'
+                                            }`}>
+                                                {item.itemType === 'article' ? '📖 Interactive Article' : '📹 Regular Content'}
+                                            </div>
+                                            
+                                            {/* Preview Image or Icon */}
+                                            <div className="h-32 bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center justify-center relative">
+                                                {item.itemType === 'regular' && getPreviewImage(item) ? (
+                                                    <img 
+                                                        src={getPreviewImage(item)} 
+                                                        alt={item.title}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="text-center text-white">
+                                                        <div className="text-5xl mb-2">
+                                                            {item.itemType === 'article' ? '📖' : '📚'}
                                                         </div>
-                                                    )}
-                                                    {/* Subject badge overlay */}
-                                                    <div className="absolute top-2 right-2">
-                                                        <span className="text-xs bg-white text-blue-600 px-2 py-1 rounded-full shadow-md font-medium">
-                                                            {subjectNames[content.subject]?.split(' ')[0] || content.subject}
+                                                        <p className="text-sm font-medium">
+                                                            {subjectNames[item.subject]?.split(' ')[0] || item.subject}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="p-5">
+                                                <h3 className="font-bold text-xl text-gray-800 mb-2 line-clamp-1">{item.title}</h3>
+                                                
+                                                <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
+                                                    {item.itemType === 'article' 
+                                                        ? item.content.replace(/<[^>]*>/g, '').substring(0, 100)
+                                                        : (item.description || 'No description provided')}
+                                                </p>
+                                                
+                                                {/* Stats for regular content */}
+                                                {item.itemType === 'regular' && (
+                                                    <div className="flex flex-wrap gap-2 mb-4">
+                                                        {getContentStats(item).text > 0 && (
+                                                            <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">📝 {getContentStats(item).text}</span>
+                                                        )}
+                                                        {getContentStats(item).images > 0 && (
+                                                            <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-xs">🖼️ {getContentStats(item).images}</span>
+                                                        )}
+                                                        {getContentStats(item).videos > 0 && (
+                                                            <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">🎬 {getContentStats(item).videos}</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Stats for interactive articles */}
+                                                {item.itemType === 'article' && item.interactiveElements?.length > 0 && (
+                                                    <div className="flex flex-wrap gap-2 mb-4">
+                                                        <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">
+                                                            🔗 {item.interactiveElements.length} interactive elements
                                                         </span>
                                                     </div>
+                                                )}
+                                                
+                                                <div className="text-xs text-gray-400 mb-4">
+                                                    📅 {new Date(item.createdAt).toLocaleDateString()}
                                                 </div>
                                                 
-                                                <div className="p-5">
-                                                    <h3 className="font-bold text-xl text-gray-800 mb-2 line-clamp-1">{content.title}</h3>
-                                                    
-                                                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
-                                                        {content.description || 'No description provided'}
-                                                    </p>
-                                                    
-                                                    {/* Content Stats with Icons */}
-                                                    <div className="flex flex-wrap gap-2 mb-4">
-                                                        {stats.text > 0 && (
-                                                            <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs flex items-center gap-1">
-                                                                📝 {stats.text}
-                                                            </span>
-                                                        )}
-                                                        {stats.images > 0 && (
-                                                            <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-xs flex items-center gap-1">
-                                                                🖼️ {stats.images}
-                                                            </span>
-                                                        )}
-                                                        {stats.videos > 0 && (
-                                                            <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs flex items-center gap-1">
-                                                                🎬 {stats.videos}
-                                                            </span>
-                                                        )}
-                                                        {stats.audio > 0 && (
-                                                            <span className="bg-yellow-100 text-yellow-600 px-2 py-1 rounded text-xs flex items-center gap-1">
-                                                                🎵 {stats.audio}
-                                                            </span>
-                                                        )}
-                                                        {stats.youtube > 0 && (
-                                                            <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs flex items-center gap-1">
-                                                                📺 {stats.youtube}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    <div className="text-xs text-gray-400 mb-4">
-                                                        📅 {new Date(content.createdAt).toLocaleDateString()}
-                                                    </div>
-                                                    
-                                                    <div className="flex gap-2">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => item.itemType === 'article' ? viewArticle(item._id) : viewContent(item._id)}
+                                                        className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+                                                    >
+                                                        👁️ View Content
+                                                    </button>
+                                                    {item.itemType === 'regular' && (
                                                         <button
-                                                            onClick={() => viewContent(content._id)}
-                                                            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-                                                        >
-                                                            👁️ View Content
-                                                        </button>
-                                                        <button
-                                                            onClick={() => startWorking(content)}
+                                                            onClick={() => startWorking(item)}
                                                             className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
                                                         >
                                                             ✏️ Work on it
                                                         </button>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
-                                        );
-                                    })
+                                        </div>
+                                    ))
                                 )}
                             </div>
                         )}
@@ -372,7 +445,6 @@ const StudentDashboard = ({ token, user }) => {
                             </button>
                         </div>
                         <div className="p-6">
-                            {/* Show the original content for reference */}
                             <div className="mb-6 p-4 bg-blue-50 rounded-lg max-h-60 overflow-y-auto">
                                 <h3 className="font-bold mb-2">📖 Original Content (Reference):</h3>
                                 {selectedContent.elements?.filter(el => el.type === 'text').length > 0 ? (
@@ -382,17 +454,8 @@ const StudentDashboard = ({ token, user }) => {
                                 ) : (
                                     <p className="text-gray-500 italic">No text content available for reference.</p>
                                 )}
-                                {selectedContent.elements?.filter(el => el.type === 'image').length > 0 && (
-                                    <div className="mt-2">
-                                        <p className="text-sm text-gray-600 mb-1">Reference Images:</p>
-                                        {selectedContent.elements.filter(el => el.type === 'image').slice(0, 2).map((el, idx) => (
-                                            <img key={idx} src={el.url} alt="Reference" className="max-w-full max-h-32 rounded mt-2" />
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                             
-                            {/* Rich Text Editor */}
                             <RichTextEditor 
                                 initialContent={myWorks.find(w => w.contentId?._id === selectedContent._id)?.annotatedContent || ''}
                                 onSave={(content) => saveWork(selectedContent._id, content)}

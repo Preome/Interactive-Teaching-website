@@ -4,7 +4,7 @@ const contentSchema = new mongoose.Schema({
     subject: {
         type: String,
         required: true,
-        enum: ['microsoft_word', 'excel', 'powerpoint', 'internet', 'other']
+        enum: ['microsoft_word', 'excel', 'powerpoint', 'internet', 'bangla_article', 'english_article', 'math', 'science', 'history', 'geography', 'other']
     },
     title: {
         type: String,
@@ -16,14 +16,25 @@ const contentSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    contentType: {
+        type: String,
+        enum: ['standard', 'interactive_article'],
+        default: 'standard'
+    },
     elements: [{
         type: {
             type: String,
-            enum: ['text', 'image', 'video', 'audio', 'youtube'],
+            enum: ['text', 'image', 'video', 'audio', 'youtube', 'interactive_text'],
             required: true
         },
         content: String,
         url: String,
+        interactiveElements: [{
+            emoji: String,
+            word: String,
+            explanation: String,
+            position: Number
+        }],
         order: Number
     }],
     createdAt: {
