@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ReactPlayer from 'react-player';
@@ -12,6 +12,9 @@ const ContentViewPage = ({ token, user }) => {
     const [activeSection, setActiveSection] = useState(null);
     const [activePopup, setActivePopup] = useState(null);
     const [showDebug, setShowDebug] = useState(false);
+    const [editingArticle, setEditingArticle] = useState(null);
+    const [annotatedText, setAnnotatedText] = useState('');
+    const editorRef = useRef(null);
 
     const fetchContent = useCallback(async () => {
         try {
@@ -98,7 +101,7 @@ const ContentViewPage = ({ token, user }) => {
     };
 
     // Component for Interactive Word Popup
-    const InteractiveWord = ({ segment, popupId, onClose }) => {
+    const InteractiveWord = ({ segment, popupId }) => {
         const isOpen = activePopup === popupId;
         
         return (
@@ -181,7 +184,125 @@ const ContentViewPage = ({ token, user }) => {
         );
     };
 
-    // Render Interactive Article
+    // Inline Annotation Toolbar with Media
+    const InlineToolbar = () => (
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-white border shadow-xl rounded-xl px-4 py-3 flex gap-2 backdrop-blur-sm">
+            <div className="flex gap-1 text-xs">
+                <button onClick={() => document.execCommand('bold')} className="p-2 hover:bg-gray-100 rounded-lg font-bold transition-all" title="Bold">**B**</button>
+                <button onClick={() => document.execCommand('italic')} className="p-2 hover:bg-gray-100 rounded-lg italic" title="Italic">*I*</button>
+                <button onClick={() => document.execCommand('underline')} className="p-2 hover:bg-gray-100 rounded-lg underline" title="Underline"><u>U</u></button>
+            </div>
+            
+            <div className="w-px bg-gray-200 h-8 mx-2"></div>
+            
+            <div className="flex gap-1 text-xs">
+                <button onClick={() => document.execCommand('hiliteColor', false, '#ffff00')} className="p-2 hover:bg-yellow-100 rounded-lg bg-yellow-50 border border-yellow-200" title="Highlight">🖍️</button>
+                <button onClick={() => document.execCommand('formatBlock', false, 'blockquote')} className="p-2 hover:bg-blue-100 rounded-lg" title="Quote">💭</button>
+            </div>
+            
+            <div className="w-px bg-gray-200 h-8 mx-2"></div>
+            
+            <div className="flex gap-1 text-xs">
+                <button onClick={async () => {
+                    const imageUrl = prompt('Enter image URL (or drag/drop file):');
+                    if (imageUrl) {
+                        document.execCommand('insertHTML', false, `<img src="${imageUrl}" alt="Student image" class="max-w-full h-auto rounded-lg shadow-md mx-auto block my-2" />`);
+                    }
+                }} className="p-2 hover:bg-green-100 rounded-lg" title="Image Link 🖼️">🖼️</button>
+                <button onClick={async () => {
+                    const videoUrl = prompt('Enter video URL (mp4/webm):');
+                    if (videoUrl) {
+                        document.execCommand('insertHTML', false, `<video controls class="w-full rounded-lg shadow-md my-2"><source src="${videoUrl}" /></video>`);
+                    }
+                }} className="p-2 hover:bg-purple-100 rounded-lg" title="Video Link 🎬">🎬</button>
+                <button onClick={async () => {
+                    const audioUrl = prompt('Enter audio URL (mp3/wav):');
+                    if (audioUrl) {
+                        document.execCommand('insertHTML', false, `<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg my-2"><div class="text-2xl">🎵</div><audio controls class="flex-1"><source src="${audioUrl}" /></audio></div>`);
+                    }
+                }} className="p-2 hover:bg-pink-100 rounded-lg" title="Audio Link 🎵">🎵</button>
+            </div>
+            
+            <div className="w-px bg-gray-200 h-8 mx-2"></div>
+            
+            <div className="flex gap-1">
+                <button onClick={() => document.execCommand('justifyLeft')} className="p-2 hover:bg-gray-100 rounded text-xs" title="Left Align">↤</button>
+                <button onClick={() => document.execCommand('justifyCenter')} className="p-2 hover:bg-gray-100 rounded text-xs" title="Center">⍐</button>
+                <button onClick={() => document.execCommand('justifyRight')} className="p-2 hover:bg-gray-100 rounded text-xs" title="Right">↦</button>
+            </div>
+            
+            <div className="flex gap-1 ml-2">
+                <button onClick={() => document.execCommand('undo')} className="p-2 hover:bg-gray-100 rounded text-xs" title="Undo">↶</button>
+                <button onClick={() => document.execCommand('redo')} className="p-2 hover:bg-gray-100 rounded text-xs" title="Redo">↷</button>
+            </div>
+        </div>
+    );
+
+    // Render Inline Editable Article
+    const renderInlineEditableArticle = (element) => {
+        return (
+            <div className="mb-6 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl shadow-xl border-2 border-indigo-200 relative">
+                <InlineToolbar />
+                <div className="flex items-center gap-2 mb-6 pb-4 border-b border-indigo-200">
+                    <span className="text-3xl">📰</span>
+                    <h3 className="font-bold text-xl text-gray-800 flex-1">Interactive Article - Live Annotation Mode ✨</h3>
+                    <button
+                        onClick={() => {
+                            setEditingArticle(null);
+                            setAnnotatedText('');
+                        }}
+                        className="text-gray-500 hover:text-gray-700 text-xl"
+                    >
+                        ✕
+                    </button>
+                </div>
+                
+                <div 
+                    ref={editorRef}
+                    contentEditable 
+                    suppressContentEditableWarning={true}
+                    dangerouslySetInnerHTML={{ __html: annotatedText || element.content || '' }}
+                    onInput={(e) => setAnnotatedText(e.currentTarget.innerHTML)}
+                    className="prose prose-lg max-w-none leading-relaxed min-h-[300px] p-8 border-2 border-dashed border-indigo-300 rounded-xl bg-white shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                    placeholder="Click here to annotate the article... Use toolbar or Ctrl+B/I/U..."
+                />
+                
+                <div className="mt-6 pt-4 border-t flex gap-3">
+                    <button
+                        onClick={async () => {
+                            console.log('Saving inline annotations:', annotatedText);
+                            try {
+                                await axios.post(`http://localhost:5000/api/student/save-annotations/${contentId}`, {
+                                    annotatedContent: annotatedText
+                                }, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                });
+                                alert('Annotations saved directly to your work! ✅');
+                            } catch (error) {
+                                console.error('Save error:', error.response?.data);
+                                alert('Save failed: ' + (error.response?.data?.error || error.message));
+                            }
+                        }}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg font-semibold"
+                    >
+                        💾 Save Annotations Now
+                    </button>
+                    <button
+                        onClick={() => setEditingArticle(null)}
+                        className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition"
+                    >
+                        Done Editing
+                    </button>
+                </div>
+                
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
+                    <strong>💡 Quick Formatting:</strong> Ctrl+B (bold), Ctrl+I (italic), Ctrl+U (underline), Select text → 🖍️ highlight
+                </div>
+            </div>
+        );
+    };
+
+    // Render Interactive Article (normal mode)
     const renderInteractiveArticle = (element, idx) => {
         const text = element.content || '';
         const interactiveItems = element.interactiveElements || [];
@@ -189,7 +310,7 @@ const ContentViewPage = ({ token, user }) => {
         if (interactiveItems.length === 0) {
             return (
                 <div key={idx} className="mb-6 p-6 bg-white rounded-lg shadow-md">
-                    <p className="text-gray-500">No interactive elements in this article.</p>
+                    <p className="text-gray-500 italic">No interactive elements in this article.</p>
                 </div>
             );
         }
@@ -237,16 +358,27 @@ const ContentViewPage = ({ token, user }) => {
         }
         
         return (
-            <div key={idx} className="mb-6 p-6 bg-white rounded-lg shadow-md">
+            <div key={idx} className="mb-6 p-6 bg-white rounded-lg shadow-md hover:shadow-xl transition-all">
                 <div className="flex items-center gap-2 mb-4 pb-3 border-b">
                     <span className="text-2xl">📰</span>
-                    <h3 className="font-bold text-lg text-gray-800">Interactive Article</h3>
+                    <h3 className="font-bold text-lg text-gray-800 flex-1">Interactive Article</h3>
                     <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full">
                         {interactiveItems.length} interactive word(s)
                     </span>
+                    {user.role === 'student' && (
+                        <button
+                            onClick={() => {
+                                setEditingArticle(element);
+                                setAnnotatedText(element.content || '');
+                            }}
+                            className="ml-auto text-sm bg-gradient-to-r from-orange-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-pink-600 transition-all shadow-md font-medium"
+                        >
+                            ✨ Live Annotate
+                        </button>
+                    )}
                 </div>
                 
-                <div className="prose max-w-none leading-relaxed">
+                <div className="prose prose-lg max-w-none leading-relaxed text-lg">
                     {segments.map((segment, segIdx) => {
                         if (segment.type === 'interactive') {
                             return (
@@ -273,12 +405,12 @@ const ContentViewPage = ({ token, user }) => {
             console.log('Rendering interactive articles');
             const interactiveElements = content?.elements?.filter(el => el.type === 'interactive_text') || [];
             console.log('Interactive elements for render:', interactiveElements.length);
-            return renderInteractiveArticle(interactiveElements[0], 0) || (
-                <div className="text-center py-8 text-gray-500">
-                    <p>No interactive articles available</p>
-                    <p className="text-sm mt-2">This means the data wasn't saved correctly during upload.</p>
-                </div>
-            );
+            
+            if (editingArticle) {
+                return renderInlineEditableArticle(editingArticle);
+            }
+            
+            return interactiveElements.map((element, idx) => renderInteractiveArticle(element, idx));
         }
         
         const elements = getElementsByType(activeSection);
