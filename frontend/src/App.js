@@ -55,9 +55,6 @@ function App() {
                         <ContentViewPage token={token} user={user} />
                     </ProtectedRoute>
                 } />
-                
-
-                
                 <Route path="/" element={
                     <Navigate to={token ? (user?.role === 'teacher' ? '/teacher' : '/student') : '/login'} replace />
                 } />

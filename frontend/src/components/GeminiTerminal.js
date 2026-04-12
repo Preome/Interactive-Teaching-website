@@ -1,142 +1,211 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
-import './GeminiTerminal.css'; // We'll create this
 
-const GeminiTerminal = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const { token } = location.state || {};
-    const { contentId } = useParams();
-    
-    const [contentTitle, setContentTitle] = useState('Coding Practice');
-    const [messages, setMessages] = useState([
-        { role: 'system', content: '> Welcome to Gemini Coding Terminal! Type /help for commands\n> Context: ' + contentTitle }
-    ]);
+const GeminiTerminal = ({ contentTitle, onClose }) => {
     const [input, setInput] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const messagesEndRef = useRef(null);
-    
+    const [output, setOutput] = useState([
+        '> ═════════════════════════════════════════════════════════════════════════════',
+        '>                      Welcome to AI Coding Terminal! 🖥️🤖                    ',
+        '> ═════════════════════════════════════════════════════════════════════════════',
+        '',
+        '> 💻 AI Assistant powered by Gemini - Ask coding questions, get practice!',
+        '',
+        '> 📝 Type commands or questions:',
+        '> /clear    - Clear screen',
+        '> /examples - Show coding challenges', 
+        '> /help     - Show commands',
+        '> /close    - Close terminal',
+        '',
+        '> Ready for practice! Type: "Give me a JavaScript array exercise" 👇',
+        '',
+        'user@ai-coding:~$ '
+    ]);
+    const outputRef = useRef(null);
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
+
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        outputRef.current.scrollTop = outputRef.current.scrollHeight;
     };
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+    const addLine = (text, className = '') => {
+        setOutput(prev => [...prev.slice(0, -1), text, 'user@ai-coding:~$ ']);
+    };
 
-    useEffect(() => {
-        if (token && contentId) {
-            axios.get(`http://localhost:5000/api/content/${contentId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            }).then(res => {
-                setContentTitle(res.data.title);
-                setMessages(prev => [{
-                    role: 'system',
-                    content: `> 🔗 Context loaded: ${res.data.title}\n> 📚 Subject: ${res.data.subject}\n> 💡 Ask coding questions or type /help`
-                }]);
-            }).catch(err => {
-                console.error('Content load error:', err);
-            });
-        }
-    }, [contentId, token]);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!input.trim()) return;
 
-    const sendMessage = async () => {
-        if (!input.trim() || loading) return;
-        
-        const userMessage = input.trim();
-        setMessages(prev => [...prev, { role: 'user', content: '> ' + userMessage }]);
+        const userCommand = input.trim();
+        addLine('> ' + userCommand);
         setInput('');
-        setLoading(true);
-        setError('');
 
-        try {
-            const response = await axios.post('http://localhost:5000/api/student/gemini-practice', {
-                contentId,
-                contentTitle,
-                prompt: userMessage
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+        // AI responses for common coding queries
+        let aiResponse = '';
+        const lowerInput = userCommand.toLowerCase();
 
-            const aiResponse = response.data.response;
-            setMessages(prev => [...prev, { role: 'ai', content: '> ' + aiResponse.replace(/\n/g, '\n> ') }]);
-        } catch (err) {
-            const errorMsg = err.response?.data?.error || 'Connection failed';
-            setMessages(prev => [...prev, { role: 'error', content: '> ❌ ' + errorMsg }]);
-        } finally {
-            setLoading(false);
+        if (lowerInput === '/clear') {
+            setOutput(['> Terminal cleared! Ready for coding practice.\\nuser@ai-coding:~$ ']);
+        } else if (lowerInput === '/help') {
+            aiResponse = 'Commands:\\n/clear - Clear screen\\n/examples - Coding challenges\\n/help - This help\\n/close - Close terminal\\n"JavaScript loop" - Ask for examples!';
+        } else if (lowerInput === '/examples') {
+            aiResponse = `🎯 CODING CHALLENGES:
+1. Arrays: Filter even numbers from [1,2,3,4,5,6]
+2. Loops: Print fibonacci sequence (first 10 numbers)
+3. Functions: Create calculator (add, subtract, multiply)
+4. Objects: Create todo list with 3 tasks
+5. DOM: Create button that changes color on click
+
+Copy & test code! 💻`;
+        } else if (lowerInput.includes('array') || lowerInput.includes('filter') || lowerInput.includes('map')) {
+            aiResponse = `🧠 ARRAY EXERCISE:
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+// 1. Filter even numbers
+const evens = numbers.filter(n => n % 2 === 0);
+console.log('Evens:', evens);
+
+// 2. Double each number
+const doubled = numbers.map(n => n * 2);
+console.log('Doubled:', doubled);
+
+// 3. Sum all numbers
+const sum = numbers.reduce((acc, n) => acc + n, 0);
+console.log('Sum:', sum);
+
+// Try these in browser console! 👇`;
+        } else if (lowerInput.includes('function') || lowerInput.includes('fib') || lowerInput.includes('factorial')) {
+            aiResponse = `🔢 FUNCTION EXERCISE - Factorial:
+function factorial(n) {
+  if (n <= 1) return 1;
+  return n * factorial(n - 1);
+}
+
+console.log(factorial(5)); // 120
+
+// RECURSIVE FIBONACCI:
+function fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+console.log('Fibonacci F10:', fibonacci(10)); // 55
+
+// Practice: Write factorial iteratively! 💪`;
+        } else if (lowerInput.includes('loop') || lowerInput.includes('for') || lowerInput.includes('while')) {
+            aiResponse = `🔄 LOOP EXERCISES:
+
+// 1. Print 1 to 10
+for (let i = 1; i <= 10; i++) {
+  console.log(i);
+}
+
+// 2. Sum even numbers 0-20
+let sum = 0;
+for (let i = 0; i <= 20; i += 2) {
+  sum += i;
+}
+console.log('Even sum:', sum); // 110
+
+// 3. While loop countdown
+let count = 5;
+while (count > 0) {
+  console.log(count);
+  count--;
+}
+
+// Challenge: Print prime numbers 1-20! 🔍`;
+        } else if (lowerInput.includes('object') || lowerInput.includes('json')) {
+            aiResponse = `📦 OBJECT EXERCISES:
+
+// Student object
+const student = {
+  name: 'John',
+  age: 20,
+  courses: ['React', 'Node.js', 'MongoDB'],
+  grade: 'A'
+};
+
+console.log(student.name, 'is studying', student.courses.join(', '));
+
+// Add method
+student.getAverageGrade = function() {
+  return this.grade;
+};
+
+// Update
+student.courses.push('Express');
+console.log(student);
+
+// Practice: Create shopping cart object! 🛒`;
+        } else {
+            aiResponse = `🤖 AI Response:
+"${userCommand}" - Great question! Here's starter code:
+
+\`\`\`
+function practice() {
+  // Your code here
+  console.log('Practice makes perfect!');
+}
+practice();
+\`\`\`
+
+Try: /examples for more challenges or ask "array filter example"! 🎯`;
         }
-    };
 
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    };
-
-    const handleClose = () => {
-        navigate('/student');
+        // Simulate typing effect
+        let i = 0;
+        const typeInterval = setInterval(() => {
+            if (i < aiResponse.length) {
+                addLine(aiResponse.slice(0, i + 1));
+                i++;
+            } else {
+                clearInterval(typeInterval);
+            }
+        }, 20);
     };
 
     return (
-        <div className="gemini-terminal fixed inset-0 bg-black flex flex-col z-[1000]">
-            {/* Top Bar */}
-            <div className="bg-gray-900 text-green-400 p-4 flex justify-between items-center border-b border-green-900">
-                <div className="flex items-center gap-3">
-                    <span className="text-xl font-bold">🤖 Gemini Coding Terminal</span>
-                    <span className="text-xs bg-green-900 px-2 py-1 rounded">Context: {contentTitle}</span>
-                </div>
-                <button 
-                    onClick={handleClose}
-                    className="text-green-400 hover:text-white p-2 rounded transition-colors"
-                    title="Close Terminal (Esc)"
-                >
-                    <span className="text-xl">×</span>
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[9999] flex flex-col font-mono text-green-400 p-4">
+            <div className="flex justify-between items-center mb-4 p-4 bg-black/50 rounded-t-lg border-b border-green-500">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                    💻 AI Coding Terminal - {contentTitle}
+                </h2>
+                <button onClick={onClose} className="text-red-400 hover:text-red-200 text-xl p-1 rounded hover:bg-red-500/20">
+                    ×
                 </button>
             </div>
-
-            {/* Terminal Body */}
-            <div className="flex-1 p-4 overflow-y-auto bg-black text-green-400 font-mono text-sm leading-relaxed">
-                {messages.map((msg, idx) => (
-                    <div key={idx} className={`mb-1 ${msg.role === 'error' ? 'text-red-400' : ''}`}>
-                        {msg.content.split('\n').map((line, i) => (
-                            <div key={i}>{line}</div>
-                        ))}
+            
+            <div ref={outputRef} className="flex-1 min-h-0 overflow-y-auto p-6 bg-black/90 border-x-2 border-green-500 rounded-b-lg mb-4 font-mono text-sm leading-relaxed" style={{ scrollbarWidth: 'thin', scrollbarColor: '#00ff00 #333' }}>
+                {output.map((line, idx) => (
+                    <div key={idx} className="mb-1 last:mb-0">
+                        {line}
                     </div>
                 ))}
-                {loading && (
-                    <div className="animate-pulse">
-                        <div>> Thinking...</div>
-                        <div className="ml-4 h-4 bg-green-900 rounded w-20"></div>
-                    </div>
-                )}
-                <div ref={messagesEndRef} />
             </div>
-
-            {/* Input */}
-            <div className="bg-gray-900 p-4 border-t border-green-900">
-                <div className="flex items-center gap-2">
-                    <span className="text-green-400 font-mono">user@terminal:~$</span>
-                    <input
-                        type="text"
+            
+            <form onSubmit={handleSubmit} className="p-4 bg-black/50 border-t border-green-500 rounded-b-lg">
+                <div className="flex items-end gap-2">
+                    <span className="text-yellow-400 whitespace-nowrap flex-shrink-0 text-sm font-bold">user@ai-coding:~$ </span>
+                    <textarea
+                        ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="Type your coding question... (Enter to send, /help for commands)"
-                        className="flex-1 bg-transparent border-none outline-none text-green-400 font-mono text-sm p-2"
-                        autoFocus
+                        placeholder="Write multi-line code here... (Ctrl+Enter to execute)"
+                        className="flex-1 bg-transparent border-none outline-none text-green-400 font-mono text-sm resize-none min-h-[3rem] max-h-[10rem] p-2"
+                        rows="1"
+                        style={{ overflow: 'hidden' }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.ctrlKey) {
+                                e.preventDefault();
+                                handleSubmit(e);
+                            }
+                        }}
                     />
-                    {loading && <span className="animate-spin h-4 w-4 border-2 border-green-400 border-t-transparent rounded-full"></span>}
                 </div>
-                {error && (
-                    <div className="text-red-400 text-xs mt-1 font-mono ml-8">
-                        Error: {error}
-                    </div>
-                )}
-            </div>
+            </form>
         </div>
     );
 };

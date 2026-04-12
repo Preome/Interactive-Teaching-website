@@ -396,22 +396,109 @@ const StudentDashboard = ({ token, user }) => {
                                                     >
                                                         👁️ View Lesson
                                                     </button>
-                                                    {item.itemType === 'regular' && item.subject === 'programming' && (
-                                                        <div className="flex gap-2 w-full">
-                                                            <button
-                                                                onClick={() => startWorking(item)}
-                                                                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 px-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
-                                                            >
-                                                                💻 Coding Practice
-                                                            </button>
-                                                            <button
-                                                                onClick={() => startWorking(item)}
-                                                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
-                                                            >
-                                                                ✏️ Notes
-                                                            </button>
-                                                        </div>
-                                                    )}
+{item.itemType === 'regular' && item.subject === 'programming' && (
+<div className="flex gap-2 w-full">
+    <button
+        onClick={() => {
+            // Create full coding terminal
+            const terminal = document.createElement('div');
+            terminal.id = 'coding-terminal';
+            terminal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+                background: #000; color: #00ff00; font-family: 'Courier New', monospace; 
+                font-size: 14px; z-index: 99999; padding: 20px; box-sizing: border-box;
+                overflow: hidden;
+            `;
+            terminal.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: rgba(0,255,0,0.1); border-bottom: 1px solid #00ff00;">
+                    <h2 style="margin: 0; font-size: 18px; font-weight: bold;">💻 Coding Terminal - ${item.title.replace(/&/g, '&amp;')}</h2>
+                    <button onclick="document.getElementById('coding-terminal').remove()" style="background: none; border: none; color: #ff4444; font-size: 24px; cursor: pointer; padding: 0;">×</button>
+                </div>
+                <div id="terminal-output" style="height: 70vh; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #00ff00; margin-bottom: 10px; white-space: pre-wrap; line-height: 1.4;">
+> Welcome to Interactive Coding Terminal! ⌨️
+> Practice JavaScript, HTML, CSS, and more...
+
+> 💡 SAMPLE EXERCISES:
+> 1. console.log('Hello World');
+> 2. let arr = [1,2,3,4,5].filter(x => x % 2 === 0); console.log(arr);
+> 3. function factorial(n) { return n <= 1 ? 1 : n * factorial(n-1); } console.log(factorial(5));
+> 4. const todo = { task: 'Learn React', done: false }; console.log(todo);
+> 5. for(let i = 0; i < 10; i++) { if(i % 2 === 0) console.log('Even:', i); }
+
+> 📝 Type your code below and press Enter to run!
+> Commands: /clear, /help, /examples
+                </div>
+                <div style="display: flex; align-items: center; padding: 10px; background: #000; border: 1px solid #00ff00; border-top: none;">
+                    <span style="color: #ffff00; margin-right: 5px; white-space: nowrap;">user@practice:~$ </span>
+                    <input id="terminal-input" style="flex: 1; background: none; border: none; color: #00ff00; font-family: inherit; font-size: inherit; outline: none; padding: 0;" placeholder="Enter code or command..." autocomplete="off">
+                </div>
+                <script>
+                    const input = document.getElementById('terminal-input');
+                    const output = document.getElementById('terminal-output');
+                    input.focus();
+                    input.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            const command = input.value.trim();
+                            if (command) {
+                                const newLine = document.createElement('div');
+                                newLine.textContent = '> ' + command;
+                                newLine.style.color = '#00ff00';
+                                output.appendChild(newLine);
+                                if (command === '/clear') {
+                                    output.innerHTML = '> Terminal cleared! Type /help for commands.\\n> Ready for coding practice!';
+                                } else if (command === '/help') {
+                                    const help = document.createElement('div');
+                                    help.innerHTML = '> Available commands:\\n> /clear - Clear terminal\\n> /help - Show this help\\n> /examples - Show sample code\\n> Type JavaScript code directly!';
+                                    help.style.color = '#ffff00';
+                                    output.appendChild(help);
+                                } else if (command === '/examples') {
+                                    const examples = document.createElement('div');
+                                    examples.innerHTML = '> 💡 EXAMPLES:\\n> console.log("Hello World")\\n> let sum = 0; for(let i=1; i<=10; i++) sum += i; console.log(sum);\\n> const obj = {name: "Practice", level: "Beginner"}; console.log(obj);';
+                                    examples.style.color = '#00ff88';
+                                    output.appendChild(examples);
+                                } else {
+                                    // Simulate code execution
+                                    let result = '';
+                                    try {
+                                        // Simple eval for basic JS (safe in browser sandbox)
+                                        const func = new Function('return ' + command + ';');
+                                        const outputResult = func();
+                                        result = '> Output: ' + JSON.stringify(outputResult, null, 2);
+                                    } catch (e) {
+                                        result = '> Error: ' + e.message;
+                                    }
+                                    const resultLine = document.createElement('div');
+                                    resultLine.innerHTML = result.replace(/\\n/g, '<br>');
+                                    resultLine.style.color = '#ffff00';
+                                    output.appendChild(resultLine);
+                                }
+                                output.scrollTop = output.scrollHeight;
+                                input.value = '';
+                            }
+                        }
+                    });
+                    document.addEventListener('keydown', function(e) {
+                        if (e.key === 'Escape') {
+                            document.getElementById('coding-terminal').remove();
+                        }
+                    });
+                <\/script>
+            `;
+            document.body.appendChild(terminal);
+            terminal.querySelector('#terminal-input').focus();
+        }}
+        className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 px-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+    >
+        💻 Coding Terminal
+    </button>
+    <button
+        onClick={() => startWorking(item)}
+        className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+    >
+        ✏️ Notes
+    </button>
+</div>
+)}
                                                     {item.itemType === 'regular' && item.subject !== 'programming' && (
                                                         <button
                                                             onClick={() => startWorking(item)}
