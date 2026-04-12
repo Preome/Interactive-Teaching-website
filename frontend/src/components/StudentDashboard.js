@@ -4,6 +4,7 @@ import axios from 'axios';
 import RichTextEditor from './RichTextEditor';
 import QuizList from './QuizList';
 import QuizTaker from './QuizTaker';
+import CodingTerminal from './CodingTerminal';
 
 const StudentDashboard = ({ token, user }) => {
     const navigate = useNavigate();
@@ -21,8 +22,10 @@ const StudentDashboard = ({ token, user }) => {
     const [selectedQuiz, setSelectedQuiz] = useState(null);
     const [showQuizTaker, setShowQuizTaker] = useState(false);
     const [quizResults, setQuizResults] = useState([]);
+    const [selectedCodingContent, setSelectedCodingContent] = useState(null);
+    const [showCodingTerminal, setShowCodingTerminal] = useState(false);
 
-    const subjects = ['all', 'microsoft_word', 'excel', 'powerpoint', 'internet', 'bangla', 'english', 'math', 'science', 'other'];
+    const subjects = ['all', 'microsoft_word', 'excel', 'powerpoint', 'internet', 'bangla', 'english', 'math', 'science', 'programming', 'coding', 'javascript', 'other'];
     const subjectNames = {
         'microsoft_word': 'Microsoft Word',
         'excel': 'Excel',
@@ -32,6 +35,9 @@ const StudentDashboard = ({ token, user }) => {
         'english': 'English',
         'math': 'Mathematics',
         'science': 'Science',
+        'programming': '💻 Programming',
+        'coding': '💻 Coding',
+        'javascript': '📜 JavaScript',
         'other': 'Other Subjects'
     };
 
@@ -149,6 +155,12 @@ const StudentDashboard = ({ token, user }) => {
             youtube: content.elements?.filter(el => el.type === 'youtube').length || 0
         };
         return stats;
+    };
+
+    // Check if content is programming related
+    const isProgrammingSubject = (subject) => {
+        const programmingSubjects = ['programming', 'coding', 'javascript', 'python', 'java', 'webdev'];
+        return programmingSubjects.includes(subject);
     };
 
     const getAllContent = useMemo(() => {
@@ -434,6 +446,11 @@ const StudentDashboard = ({ token, user }) => {
                                                             ✨ {item.interactiveElements.length} Interactive Elements
                                                         </span>
                                                     )}
+                                                    {item.itemType === 'regular' && isProgrammingSubject(item.subject) && (
+                                                        <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold shadow-sm">
+                                                            🤖 AI Coding Terminal
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 
                                                 <div className="text-xs text-gray-500 mb-5 flex items-center justify-between">
@@ -450,12 +467,32 @@ const StudentDashboard = ({ token, user }) => {
                                                     >
                                                         👁️ View Lesson
                                                     </button>
-                                                    <button
-                                                        onClick={() => startWorking(item)}
-                                                        className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
-                                                    >
-                                                        ✏️ Practice
-                                                    </button>
+                                                    {item.itemType === 'regular' && isProgrammingSubject(item.subject) ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedCodingContent(item);
+                                                                    setShowCodingTerminal(true);
+                                                                }}
+                                                                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2.5 px-4 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+                                                            >
+                                                                💻 Coding Terminal
+                                                            </button>
+                                                            <button
+                                                                onClick={() => startWorking(item)}
+                                                                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+                                                            >
+                                                                ✏️ Notes
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => startWorking(item)}
+                                                            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 px-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] text-sm"
+                                                        >
+                                                            ✏️ Practice
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -651,6 +688,18 @@ const StudentDashboard = ({ token, user }) => {
                         setSelectedQuiz(null);
                     }}
                     onComplete={handleQuizComplete}
+                />
+            )}
+
+            {/* Coding Terminal Modal */}
+            {showCodingTerminal && selectedCodingContent && (
+                <CodingTerminal
+                    content={selectedCodingContent}
+                    onClose={() => {
+                        setShowCodingTerminal(false);
+                        setSelectedCodingContent(null);
+                    }}
+                    token={token}
                 />
             )}
         </div>
