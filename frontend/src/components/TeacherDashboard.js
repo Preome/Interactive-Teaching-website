@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 import ContentUpload from './ContentUpload';
 import QuizCreator from './QuizCreator';
 import QuizList from './QuizList';

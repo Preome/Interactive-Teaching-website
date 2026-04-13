@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 import InteractiveArticleEditor from './InteractiveArticleEditor';
 
 const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditing = false }) => {

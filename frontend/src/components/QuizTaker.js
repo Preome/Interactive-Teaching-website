@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 
 const QuizTaker = ({ token, quiz, onClose, onComplete }) => {
     const [answers, setAnswers] = useState({});

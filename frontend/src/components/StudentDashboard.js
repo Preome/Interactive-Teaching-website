@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 import RichTextEditor from './RichTextEditor';
 import QuizList from './QuizList';
 import QuizTaker from './QuizTaker';
