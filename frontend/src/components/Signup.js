@@ -16,7 +16,7 @@ const Signup = ({ setToken, setUser }) => {
         setIsLoading(true);
         setError('');
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/signup', {
+            const response = await api.post('`${API_URL}/api/auth/signup', {
                 name, email, password, role
             });
             localStorage.setItem('token', response.data.token);

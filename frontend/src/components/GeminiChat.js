@@ -32,7 +32,7 @@ const GeminiChat = ({ token, user }) => {
         setLoading(true);
 
         try {
-            const response = await axios.post('http://localhost:5000/api/gemini-chat', {
+            const response = await api.post('`${API_URL}/api/gemini-chat', {
                 contentId,
                 message: userMessage,
                 subject: 'programming'

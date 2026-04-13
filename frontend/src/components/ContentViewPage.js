@@ -17,7 +17,7 @@ const ContentViewPage = ({ token, user }) => {
 
     const fetchContent = useCallback(async () => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/content/${contentId}`, {
+            const response = await api.get(``${API_URL}/api/content/${contentId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setContent(response.data);
@@ -230,7 +230,7 @@ const ContentViewPage = ({ token, user }) => {
                     <button
                         onClick={async () => {
                             try {
-                                await axios.post(`http://localhost:5000/api/student/save-work`, {
+                                await api.post(``${API_URL}/api/student/save-work`, {
                                     contentId: content._id,
                                     annotatedContent: annotatedText
                                 }, {

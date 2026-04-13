@@ -183,7 +183,7 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
         try {
             let response;
             if (isEditing && editingContent?._id) {
-                response = await axios.put(`http://localhost:5000/api/content/update/${editingContent._id}`, formData, {
+                response = await api.put(``${API_URL}/api/content/update/${editingContent._id}`, formData, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'multipart/form-data'
@@ -191,7 +191,7 @@ const ContentUpload = ({ token, onUploadSuccess, editingContent = null, isEditin
                 });
                 alert('Content updated successfully!');
             } else {
-                response = await axios.post('http://localhost:5000/api/content/upload', formData, {
+                response = await api.post('`${API_URL}/api/content/upload', formData, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'multipart/form-data'

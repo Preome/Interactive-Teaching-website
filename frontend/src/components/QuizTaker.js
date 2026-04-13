@@ -28,7 +28,7 @@ const QuizTaker = ({ token, quiz, onClose, onComplete }) => {
         const answerArray = quiz.questions.map((_, idx) => answers[idx] || '');
         
         try {
-            const response = await axios.post(`http://localhost:5000/api/quiz/submit/${quiz._id}`, {
+            const response = await api.post(``${API_URL}/api/quiz/submit/${quiz._id}`, {
                 answers: answerArray,
                 timeSpent: quiz.timeLimit > 0 ? (quiz.timeLimit * 60 - (timeLeft || 0)) : 0
             }, {

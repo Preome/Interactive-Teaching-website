@@ -133,7 +133,7 @@ const QuizCreator = ({ token, onQuizCreated }) => {
         }
 
         try {
-            const response = await axios.post('http://localhost:5000/api/quiz/create', {
+            const response = await api.post('`${API_URL}/api/quiz/create', {
                 title,
                 description,
                 subject,
