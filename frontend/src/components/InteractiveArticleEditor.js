@@ -24,10 +24,8 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
         if (file) {
             setMediaFile(file);
             setMediaFileName(file.name);
-            // Create temporary URL for preview
             const url = URL.createObjectURL(file);
             setMediaUrl(url);
-            console.log('File selected:', file.name, 'Type:', file.type);
         }
     };
 
@@ -38,19 +36,16 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
             return;
         }
 
-        // Check if word exists in article text
         if (!articleText.toLowerCase().includes(selectedWord.toLowerCase())) {
             alert(`The word "${selectedWord}" was not found in your article text. Please make sure it matches exactly.`);
             return;
         }
 
-        // For text type, explanation is required
         if (mediaType === 'text' && !explanation.trim()) {
             alert('Please enter an explanation for this word');
             return;
         }
 
-        // For media types, file is required
         if (mediaType !== 'text' && !mediaFile) {
             alert(`Please upload a ${mediaType} file for the word "${selectedWord}"`);
             return;
@@ -63,10 +58,10 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
             explanation: mediaType === 'text' ? explanation : '',
             mediaUrl: mediaUrl || '',
             mediaFileName: mediaFile ? mediaFile.name : '',
+            mediaFile: mediaFile, // Keep the actual File object for upload
             position: 0
         };
 
-        console.log('Adding interactive word:', newInteractiveWord);
         setInteractiveWords([...interactiveWords, newInteractiveWord]);
         
         // Reset form for next word
@@ -78,11 +73,9 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
         setMediaFile(null);
         setMediaFileName('');
         
-        // Reset file input
         const fileInput = document.getElementById('media-file-input');
         if (fileInput) fileInput.value = '';
         
-        // Show success feedback
         alert(`✓ Added interactive word: "${selectedWord}"`);
     };
 
@@ -91,7 +84,6 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
     };
 
     const insertInteractiveText = () => {
-        // Validation
         if (!articleText.trim()) {
             alert('Please enter your article text');
             return;
@@ -111,21 +103,18 @@ const InteractiveArticleEditor = ({ onAddInteractiveText, onClose }) => {
                 emoji: item.emoji,
                 mediaType: item.mediaType,
                 explanation: item.explanation,
-                mediaUrl: item.mediaUrl,
+                mediaUrl: '', // Will be set by backend
                 mediaFileName: item.mediaFileName,
+                mediaFile: item.mediaFile, // Keep the File object for upload
                 position: item.position || 0
             })),
             order: 0
         };
 
-        console.log('Sending interactive element to parent:', interactiveElement);
-        console.log('Number of interactive items:', interactiveElement.interactiveElements.length);
-        
         onAddInteractiveText(interactiveElement);
         onClose();
     };
 
-    // Function to preview how the article will look
     const getPreviewText = () => {
         if (!articleText) return '';
         

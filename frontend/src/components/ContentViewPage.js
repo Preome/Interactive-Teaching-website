@@ -11,7 +11,6 @@ const ContentViewPage = ({ token, user }) => {
     const [error, setError] = useState('');
     const [activeSection, setActiveSection] = useState(null);
     const [activePopup, setActivePopup] = useState(null);
-
     const [editingArticle, setEditingArticle] = useState(null);
     const [annotatedText, setAnnotatedText] = useState('');
     const editorRef = useRef(null);
@@ -21,33 +20,11 @@ const ContentViewPage = ({ token, user }) => {
             const response = await axios.get(`http://localhost:5000/api/content/${contentId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            
-            console.log('🔍 DEBUG - Content fetched:', contentId);
-            console.log('📊 Raw content data:', JSON.stringify(response.data, null, 2));
-            
-            if (response.data.elements) {
-                const counts = {};
-                response.data.elements.forEach(el => {
-                    const type = el.type || 'unknown';
-                    counts[type] = (counts[type] || 0) + 1;
-                });
-                console.log('📈 Element types:', counts);
-                
-                const interactiveEls = response.data.elements.filter(el => el.type === 'interactive_text');
-                console.log('📰 Interactive elements found:', interactiveEls.length);
-                interactiveEls.forEach((el, i) => {
-                    console.log(`Interactive #${i}:`, {
-                        textPreview: el.content?.substring(0, 50),
-                        interactiveItems: el.interactiveElements?.length || 0
-                    });
-                });
-            }
-            
             setContent(response.data);
             setLoading(false);
         } catch (error) {
-            console.error('❌ Fetch error:', error.response?.data || error.message);
-            setError(`Failed to load content: ${error.response?.data?.error || error.message}`);
+            console.error('Fetch error:', error.response?.data || error.message);
+            setError('Failed to load content');
             setLoading(false);
         }
     }, [contentId, token]);
@@ -66,6 +43,8 @@ const ContentViewPage = ({ token, user }) => {
             'english': 'English',
             'math': 'Mathematics',
             'science': 'Science',
+            'geography': 'Geography',
+            'programming': 'Programming',
             'other': 'Other Subjects'
         };
         return subjectNames[subject] || subject;
@@ -89,14 +68,13 @@ const ContentViewPage = ({ token, user }) => {
         if (!content || !content.elements) {
             return { text: 0, images: 0, videos: 0, audio: 0, youtube: 0, interactive: 0 };
         }
-        const interactiveCount = content.elements.filter(el => el.type === 'interactive_text' && el.interactiveElements && el.interactiveElements.length > 0).length;
         return {
             text: content.elements.filter(el => el.type === 'text').length,
             images: content.elements.filter(el => el.type === 'image' && el.url).length,
             videos: content.elements.filter(el => el.type === 'video' && el.url).length,
             audio: content.elements.filter(el => el.type === 'audio' && el.url).length,
             youtube: content.elements.filter(el => el.type === 'youtube').length,
-            interactive: interactiveCount
+            interactive: content.elements.filter(el => el.type === 'interactive_text').length
         };
     };
 
@@ -170,6 +148,13 @@ const ContentViewPage = ({ token, user }) => {
                                 </div>
                             )}
                             
+                            {segment.mediaType !== 'text' && !segment.mediaUrl && (
+                                <div className="text-center py-8 text-gray-500">
+                                    <div className="text-4xl mb-2">⚠️</div>
+                                    <p>Media file not available</p>
+                                </div>
+                            )}
+                            
                             {segment.explanation && segment.mediaType !== 'text' && (
                                 <p className="text-sm text-gray-600 mt-3">{segment.explanation}</p>
                             )}
@@ -184,11 +169,11 @@ const ContentViewPage = ({ token, user }) => {
         );
     };
 
-    // Inline Annotation Toolbar with Media
+    // Inline Annotation Toolbar
     const InlineToolbar = () => (
         <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-white border shadow-xl rounded-xl px-4 py-3 flex gap-2 backdrop-blur-sm">
             <div className="flex gap-1 text-xs">
-                <button onClick={() => document.execCommand('bold')} className="p-2 hover:bg-gray-100 rounded-lg font-bold transition-all" title="Bold">**B**</button>
+                <button onClick={() => document.execCommand('bold')} className="p-2 hover:bg-gray-100 rounded-lg font-bold" title="Bold">**B**</button>
                 <button onClick={() => document.execCommand('italic')} className="p-2 hover:bg-gray-100 rounded-lg italic" title="Italic">*I*</button>
                 <button onClick={() => document.execCommand('underline')} className="p-2 hover:bg-gray-100 rounded-lg underline" title="Underline"><u>U</u></button>
             </div>
@@ -199,31 +184,6 @@ const ContentViewPage = ({ token, user }) => {
                 <button onClick={() => document.execCommand('hiliteColor', false, '#ffff00')} className="p-2 hover:bg-yellow-100 rounded-lg bg-yellow-50 border border-yellow-200" title="Highlight">🖍️</button>
                 <button onClick={() => document.execCommand('formatBlock', false, 'blockquote')} className="p-2 hover:bg-blue-100 rounded-lg" title="Quote">💭</button>
             </div>
-            
-            <div className="w-px bg-gray-200 h-8 mx-2"></div>
-            
-            <div className="flex gap-1 text-xs">
-                <button onClick={async () => {
-                    const imageUrl = prompt('Enter image URL (or drag/drop file):');
-                    if (imageUrl) {
-                        document.execCommand('insertHTML', false, `<img src="${imageUrl}" alt="Student image" class="max-w-full h-auto rounded-lg shadow-md mx-auto block my-2" />`);
-                    }
-                }} className="p-2 hover:bg-green-100 rounded-lg" title="Image Link 🖼️">🖼️</button>
-                <button onClick={async () => {
-                    const videoUrl = prompt('Enter video URL (mp4/webm):');
-                    if (videoUrl) {
-                        document.execCommand('insertHTML', false, `<video controls class="w-full rounded-lg shadow-md my-2"><source src="${videoUrl}" /></video>`);
-                    }
-                }} className="p-2 hover:bg-purple-100 rounded-lg" title="Video Link 🎬">🎬</button>
-                <button onClick={async () => {
-                    const audioUrl = prompt('Enter audio URL (mp3/wav):');
-                    if (audioUrl) {
-                        document.execCommand('insertHTML', false, `<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg my-2"><div class="text-2xl">🎵</div><audio controls class="flex-1"><source src="${audioUrl}" /></audio></div>`);
-                    }
-                }} className="p-2 hover:bg-pink-100 rounded-lg" title="Audio Link 🎵">🎵</button>
-            </div>
-            
-            <div className="w-px bg-gray-200 h-8 mx-2"></div>
             
             <div className="flex gap-1">
                 <button onClick={() => document.execCommand('justifyLeft')} className="p-2 hover:bg-gray-100 rounded text-xs" title="Left Align">↤</button>
@@ -264,39 +224,39 @@ const ContentViewPage = ({ token, user }) => {
                     dangerouslySetInnerHTML={{ __html: annotatedText || element.content || '' }}
                     onInput={(e) => setAnnotatedText(e.currentTarget.innerHTML)}
                     className="prose prose-lg max-w-none leading-relaxed min-h-[300px] p-8 border-2 border-dashed border-indigo-300 rounded-xl bg-white shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                    placeholder="Click here to annotate the article... Use toolbar or Ctrl+B/I/U..."
                 />
                 
                 <div className="mt-6 pt-4 border-t flex gap-3">
                     <button
                         onClick={async () => {
-                            console.log('Saving inline annotations:', annotatedText);
                             try {
-                                await axios.post(`http://localhost:5000/api/student/save-annotations/${contentId}`, {
+                                await axios.post(`http://localhost:5000/api/student/save-work`, {
+                                    contentId: content._id,
                                     annotatedContent: annotatedText
                                 }, {
                                     headers: { Authorization: `Bearer ${token}` }
                                 });
-                                alert('Annotations saved directly to your work! ✅');
+                                alert('Annotations saved successfully! ✅');
+                                setEditingArticle(null);
                             } catch (error) {
-                                console.error('Save error:', error.response?.data);
+                                console.error('Save error:', error);
                                 alert('Save failed: ' + (error.response?.data?.error || error.message));
                             }
                         }}
                         className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg font-semibold"
                     >
-                        💾 Save Annotations Now
+                        💾 Save Annotations
                     </button>
                     <button
                         onClick={() => setEditingArticle(null)}
                         className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition"
                     >
-                        Done Editing
+                        Cancel
                     </button>
                 </div>
                 
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
-                    <strong>💡 Quick Formatting:</strong> Ctrl+B (bold), Ctrl+I (italic), Ctrl+U (underline), Select text → 🖍️ highlight
+                    <strong>💡 Quick Formatting:</strong> Ctrl+B (bold), Ctrl+I (italic), Ctrl+U (underline)
                 </div>
             </div>
         );
@@ -319,7 +279,6 @@ const ContentViewPage = ({ token, user }) => {
         let segments = [];
         let lastIndex = 0;
         
-        // Sort items by their position in text
         const sortedItems = [...interactiveItems].sort((a, b) => {
             const posA = text.toLowerCase().indexOf(a.word.toLowerCase());
             const posB = text.toLowerCase().indexOf(b.word.toLowerCase());
@@ -365,7 +324,7 @@ const ContentViewPage = ({ token, user }) => {
                     <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full">
                         {interactiveItems.length} interactive word(s)
                     </span>
-                    {user.role === 'student' && (
+                    {user?.role === 'student' && (
                         <button
                             onClick={() => {
                                 setEditingArticle(element);
@@ -378,7 +337,7 @@ const ContentViewPage = ({ token, user }) => {
                     )}
                 </div>
                 
-                <div className="prose prose-lg max-w-none leading-relaxed text-lg">
+                <div className="prose max-w-none leading-relaxed text-lg">
                     {segments.map((segment, segIdx) => {
                         if (segment.type === 'interactive') {
                             return (
@@ -397,14 +356,18 @@ const ContentViewPage = ({ token, user }) => {
     };
 
     const renderContentByType = () => {
-        console.log('renderContentByType called:', activeSection, content?.elements?.length);
-        
         if (!activeSection) return null;
         
         if (activeSection === 'interactive') {
-            console.log('Rendering interactive articles');
             const interactiveElements = content?.elements?.filter(el => el.type === 'interactive_text') || [];
-            console.log('Interactive elements for render:', interactiveElements.length);
+            
+            if (interactiveElements.length === 0) {
+                return (
+                    <div className="text-center py-8 text-gray-500">
+                        <p>No interactive articles available</p>
+                    </div>
+                );
+            }
             
             if (editingArticle) {
                 return renderInlineEditableArticle(editingArticle);
@@ -499,7 +462,7 @@ const ContentViewPage = ({ token, user }) => {
                     <h2 className="text-2xl font-bold text-gray-800 mb-2">Content Not Found</h2>
                     <p className="text-gray-600 mb-6">{error || 'The content you are looking for does not exist.'}</p>
                     <button
-                        onClick={() => navigate('/student')}
+                        onClick={() => navigate(user?.role === 'student' ? '/student' : '/teacher')}
                         className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
                     >
                         Back to Dashboard
@@ -518,7 +481,7 @@ const ContentViewPage = ({ token, user }) => {
         { id: 'videos', icon: '🎬', name: 'Videos', color: 'bg-purple-500', count: counts.videos },
         { id: 'audio', icon: '🎵', name: 'Audio', color: 'bg-yellow-500', count: counts.audio },
         { id: 'youtube', icon: '📺', name: 'YouTube Videos', color: 'bg-red-500', count: counts.youtube },
-        { id: 'interactive', icon: '📰', name: 'Interactive Articles', color: 'bg-indigo-500', count: content?.contentType === 'interactive_article' ? 1 : counts.interactive }
+        { id: 'interactive', icon: '📰', name: 'Interactive Articles', color: 'bg-indigo-500', count: counts.interactive }
     ];
 
     const availableSections = sections.filter(section => section.count > 0);
@@ -572,36 +535,29 @@ const ContentViewPage = ({ token, user }) => {
                     </div>
                     
                     {content.description && (
-                        <div className="p-5 bg-gray-50">
-                            <h3 className="font-bold mb-2 text-gray-800">📝 Description</h3>
-                            <p className="text-gray-700 whitespace-pre-wrap">{content.description}</p>
+                        <div className="p-5 bg-gray-50 border-b">
+                            <p className="text-gray-700">{content.description}</p>
                         </div>
                     )}
                     
                     {content.introduction && (
-                        <div className="p-5 bg-green-50 border-t">
-                            <h3 className="font-bold mb-2 text-gray-800 flex items-center gap-2">
-                                <span className="text-xl">📖</span> Introduction
-                            </h3>
-                            <div className="text-gray-700 whitespace-pre-wrap prose max-w-none">{content.introduction}</div>
+                        <div className="p-5 bg-green-50 border-b">
+                            <h3 className="font-bold text-green-800 mb-2">📖 Introduction</h3>
+                            <p className="text-gray-700">{content.introduction}</p>
                         </div>
                     )}
                     
                     {content.detailedExplanation && (
-                        <div className="p-5 bg-blue-50 border-t">
-                            <h3 className="font-bold mb-2 text-gray-800 flex items-center gap-2">
-                                <span className="text-xl">📚</span> Detailed Explanation
-                            </h3>
-                            <div className="text-gray-700 whitespace-pre-wrap prose max-w-none">{content.detailedExplanation}</div>
+                        <div className="p-5 bg-blue-50 border-b">
+                            <h3 className="font-bold text-blue-800 mb-2">📚 Detailed Explanation</h3>
+                            <p className="text-gray-700 whitespace-pre-wrap">{content.detailedExplanation}</p>
                         </div>
                     )}
                     
                     {content.additionalResources && (
-                        <div className="p-5 bg-purple-50 border-t">
-                            <h3 className="font-bold mb-2 text-gray-800 flex items-center gap-2">
-                                <span className="text-xl">🔗</span> Additional Resources
-                            </h3>
-                            <div className="text-gray-700 whitespace-pre-wrap prose max-w-none">{content.additionalResources}</div>
+                        <div className="p-5 bg-purple-50 border-b">
+                            <h3 className="font-bold text-purple-800 mb-2">🔗 Additional Resources</h3>
+                            <p className="text-gray-700 whitespace-pre-wrap">{content.additionalResources}</p>
                         </div>
                     )}
                 </div>
@@ -663,7 +619,7 @@ const ContentViewPage = ({ token, user }) => {
 
                 {/* Footer Tip */}
                 <div className="mt-8 text-center text-gray-500 text-sm">
-                    <p>💡 Tip: Click on highlighted words with emojis to see images, videos, and explanations!</p>
+                    <p>💡 Tip: Click on highlighted words with emojis to see images, videos, and explanations! Students can also click "Live Annotate" to add notes.</p>
                 </div>
             </div>
         </div>
