@@ -26,13 +26,13 @@ if (process.env.MONGODB_URI) {
     console.warn('⚠️ Warning: MONGODB_URI not found. Running without database.');
 }
 
-// Routes - Make sure all routes are properly required
+// Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/content', require('./routes/content'));
 app.use('/api/student', require('./routes/student'));
 app.use('/api/quiz', require('./routes/quiz'));
 
-// Gemini route - Make sure the file exists and exports correctly
+// Gemini route
 try {
     const geminiRoutes = require('./routes/gemini');
     app.use('/api/gemini', geminiRoutes);
@@ -57,14 +57,26 @@ app.get('/', (req, res) => {
     });
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date() });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err.message);
     res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ error: 'Route not found' });
+});
+
+// Use PORT from environment variable - Render sets this automatically
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+// Bind to 0.0.0.0 to accept connections from outside
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📡 API URL: http://localhost:${PORT}`);
+    console.log(`📡 API URL: http://0.0.0.0:${PORT}`);
 });
