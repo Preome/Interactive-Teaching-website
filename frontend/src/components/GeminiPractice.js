@@ -19,7 +19,7 @@ const GeminiPractice = () => {
         // Fetch content title
         const fetchTitle = async () => {
             try {
-                const res = await api.get(``${API_URL}/api/content/${contentId}`, {
+const res = await api.get(`/api/content/${contentId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setContentTitle(res.data.title);
@@ -43,7 +43,7 @@ const GeminiPractice = () => {
         setResponse('');
 
         try {
-            const res = await api.post('`${API_URL}/api/student/gemini-practice', {
+const res = await api.post('/api/student/gemini-practice', {
                 contentId,
                 contentTitle,
                 prompt: prompt.trim()

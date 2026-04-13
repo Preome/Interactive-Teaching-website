@@ -14,7 +14,7 @@ const DebugInteractive = ({ token, user }) => {
 
     const fetchContent = async () => {
         try {
-            const response = await api.get(``${API_URL}/api/content/${contentId}`, {
+const response = await api.get(`/api/content/${contentId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             console.log('FULL RESPONSE:', response.data);

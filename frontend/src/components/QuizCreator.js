@@ -133,7 +133,7 @@ const QuizCreator = ({ token, onQuizCreated }) => {
         }
 
         try {
-            const response = await api.post('`${API_URL}/api/quiz/create', {
+await api.post('/api/quiz/create', {
                 title,
                 description,
                 subject,

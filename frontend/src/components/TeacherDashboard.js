@@ -44,7 +44,7 @@ const TeacherDashboard = ({ token, user }) => {
         setLoading(true);
         setError('');
         try {
-            const response = await api.get('`${API_URL}/api/content/all', {
+const response = await api.get('/api/content/all', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             console.log('Fetched contents:', response.data);
@@ -64,7 +64,7 @@ const TeacherDashboard = ({ token, user }) => {
     const handleDelete = async (contentId) => {
         if (window.confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
             try {
-                await api.delete(``${API_URL}/api/content/${contentId}`, {
+await api.delete(`/api/content/${contentId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 alert('✅ Content deleted successfully');

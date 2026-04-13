@@ -34,8 +34,8 @@ const QuizList = ({ token, user, onTakeQuiz, isTeacher = false }) => {
     const fetchQuizzes = async () => {
         try {
             const url = selectedSubject === 'all' 
-                ? '`${API_URL}/api/quiz/all'
-                : ``${API_URL}/api/quiz/all?subject=${selectedSubject}`;
+                ? '/api/quiz/all'
+                : `/api/quiz/all?subject=${selectedSubject}`;
             const response = await api.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -49,7 +49,7 @@ const QuizList = ({ token, user, onTakeQuiz, isTeacher = false }) => {
 
     const fetchResults = async () => {
         try {
-            const response = await api.get('`${API_URL}/api/quiz/results/my-results', {
+            const response = await api.get('/api/quiz/results/my-results', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setResults(response.data);
@@ -61,7 +61,7 @@ const QuizList = ({ token, user, onTakeQuiz, isTeacher = false }) => {
     const handleDeleteQuiz = async (quizId) => {
         if (window.confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
             try {
-                await api.delete(``${API_URL}/api/quiz/${quizId}`, {
+                await api.delete(`/api/quiz/${quizId}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 alert('Quiz deleted successfully');

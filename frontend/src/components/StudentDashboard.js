@@ -52,9 +52,9 @@ const StudentDashboard = ({ token, user }) => {
         setLoading(true);
         setError('');
         try {
-            const url = selectedSubject === 'all' 
-                ? '`${API_URL}/api/content/all'
-                : ``${API_URL}/api/content/all?subject=${selectedSubject}`;
+const url = selectedSubject === 'all' 
+                ? '/api/content/all'
+                : `/api/content/all?subject=${selectedSubject}`;
             
             const response = await api.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -74,7 +74,7 @@ const StudentDashboard = ({ token, user }) => {
 
     const fetchMyWorks = useCallback(async () => {
         try {
-            const response = await api.get('`${API_URL}/api/student/my-work', {
+const response = await api.get('/api/student/my-work', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setMyWorks(response.data);
@@ -85,7 +85,7 @@ const StudentDashboard = ({ token, user }) => {
 
     const fetchQuizResults = useCallback(async () => {
         try {
-            const response = await api.get('`${API_URL}/api/quiz/results/my-results', {
+const response = await api.get('/api/quiz/results/my-results', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setQuizResults(response.data);
@@ -103,7 +103,7 @@ const StudentDashboard = ({ token, user }) => {
 
     const saveWork = async (contentId, annotatedContent) => {
         try {
-            await api.post('`${API_URL}/api/student/save-work', {
+await api.post('/api/student/save-work', {
                 contentId,
                 annotatedContent
             }, {
