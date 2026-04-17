@@ -20,7 +20,6 @@ password: 123
 
 **Backend API:** https://interactive-teaching-website.onrender.com
 
-**Status:** ✅ Login/Signup working, CSS fixed (no black screen), API calls configured via REACT_APP_API_URL
 
 ## 🔥 **Key Features**
 
