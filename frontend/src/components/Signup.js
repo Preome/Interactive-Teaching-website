@@ -175,54 +175,7 @@ const response = await api.post('/api/auth/signup', {
                 </div>
             </div>
 
-            <style jsx>{`
-                @keyframes fadeInLeft {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-                @keyframes fadeInRight {
-                    from {
-                        opacity: 0;
-                        transform: translateX(30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-                .animate-fadeInLeft {
-                    animation: fadeInLeft 0.6s ease-out;
-                }
-                .animate-fadeInRight {
-                    animation: fadeInRight 0.6s ease-out;
-                }
-                @keyframes bounce {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-                .animate-bounce {
-                    animation: bounce 2s ease-in-out infinite;
-                }
-                @keyframes pulse {
-                    0%, 100% { opacity: 0.2; }
-                    50% { opacity: 0.4; }
-                }
-                .animate-pulse {
-                    animation: pulse 4s ease-in-out infinite;
-                }
-                .delay-1000 {
-                    animation-delay: 1s;
-                }
-                .delay-500 {
-                    animation-delay: 0.5s;
-                }
-            `}</style>
+
         </div>
     );
 };
