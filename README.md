@@ -4,7 +4,7 @@
 
 ## 🌐 Live Demo
 
-**Frontend Login:** https://interactive-teaching-website-1.onrender.com/login
+**Frontend Login:** https://interactive-teaching-website-1.onrender.com
 
 **🧑‍🏫 Teacher Login Credentials:**
 ```
